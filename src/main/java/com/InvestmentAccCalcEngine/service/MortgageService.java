@@ -1,10 +1,12 @@
 package com.InvestmentAccCalcEngine.service;
 
+import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
 import com.InvestmentAccCalcEngine.domain.MortgageSummary;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,13 +15,16 @@ import java.util.Map;
 public class MortgageService {
 
     private final Map<String, LoanType> loanTypes = new LinkedHashMap<>();
+    private final BankAccountService bankAccountService;
+    private final List<ActiveMortgage> activeMortgages = new ArrayList<>();
 
     /**
      * Spring auto-injects all LoanType implementations.
      * To add a new loan type, just create a new class implementing LoanType
      * and annotate it with @Component — it'll appear here automatically.
      */
-    public MortgageService(List<LoanType> loanTypeList) {
+    public MortgageService(List<LoanType> loanTypeList, BankAccountService bankAccountService) {
+        this.bankAccountService = bankAccountService;
         for (int i = 0; i < loanTypeList.size(); i++) {
             loanTypes.put(String.valueOf(i + 1), loanTypeList.get(i));
         }
@@ -50,5 +55,53 @@ public class MortgageService {
                 totalPayment,
                 totalInterest
         );
+    }
+
+    /**
+     * Take out a mortgage — deducts the deposit from the bank account and
+     * registers an active mortgage that will be charged monthly.
+     */
+    public ActiveMortgage takeOutMortgage(String accountNumber, LoanType loanType,
+                                          BigDecimal houseCost, BigDecimal deposit,
+                                          BigDecimal annualInterestRate, int termYears) {
+        bankAccountService.charge(accountNumber, deposit);
+
+        BigDecimal loanAmount = houseCost.subtract(deposit);
+        int termMonths = termYears * 12;
+        BigDecimal monthlyPayment = loanType.calculateMonthlyPayment(loanAmount, annualInterestRate, termMonths);
+
+        ActiveMortgage mortgage = new ActiveMortgage(
+                loanType.getName(), houseCost, deposit, loanAmount,
+                annualInterestRate, termYears, monthlyPayment
+        );
+
+        activeMortgages.add(mortgage);
+        return mortgage;
+    }
+
+    /**
+     * Process monthly payments for all active mortgages.
+     * Returns total amount charged across all mortgages this month.
+     */
+    public BigDecimal processMonthlyPayments(String accountNumber) {
+        BigDecimal totalCharged = BigDecimal.ZERO;
+
+        for (ActiveMortgage mortgage : activeMortgages) {
+            if (!mortgage.isFullyPaid()) {
+                BigDecimal payment = mortgage.applyMonthlyPayment();
+                bankAccountService.charge(accountNumber, payment);
+                totalCharged = totalCharged.add(payment);
+            }
+        }
+
+        return totalCharged;
+    }
+
+    public List<ActiveMortgage> getActiveMortgages() {
+        return activeMortgages;
+    }
+
+    public boolean hasActiveMortgages() {
+        return activeMortgages.stream().anyMatch(m -> !m.isFullyPaid());
     }
 }

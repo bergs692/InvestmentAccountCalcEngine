@@ -1,6 +1,7 @@
 com/InvestmentAccCalcEngine/service/MortgageService.class
 com/mycompany/MyAppApplication.class
 com/InvestmentAccCalcEngine/service/loan/LoanType.class
+com/InvestmentAccCalcEngine/domain/ActiveMortgage.class
 com/InvestmentAccCalcEngine/service/SalaryService.class
 com/InvestmentAccCalcEngine/domain/BankAccount.class
 com/InvestmentAccCalcEngine/domain/MonthlyProjection.class
