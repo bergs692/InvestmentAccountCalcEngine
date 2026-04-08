@@ -10,4 +10,6 @@
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/loan/StandardLoan.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/ProjectionService.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/BankAccountService.java
+/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/RentalProperty.java
+/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/RentalPropertyService.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/loan/LoanType.java

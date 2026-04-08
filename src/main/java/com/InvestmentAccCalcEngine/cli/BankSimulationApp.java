@@ -10,10 +10,12 @@ import java.util.Scanner;
 import com.InvestmentAccCalcEngine.domain.MonthlyProjection;
 import com.InvestmentAccCalcEngine.domain.MortgageSummary;
 import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
+import com.InvestmentAccCalcEngine.domain.RentalProperty;
 import com.InvestmentAccCalcEngine.service.BankAccountService;
 import com.InvestmentAccCalcEngine.service.SalaryService;
 import com.InvestmentAccCalcEngine.service.ProjectionService;
 import com.InvestmentAccCalcEngine.service.MortgageService;
+import com.InvestmentAccCalcEngine.service.RentalPropertyService;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
 
 
@@ -24,6 +26,7 @@ public class BankSimulationApp implements CommandLineRunner {
     private final SalaryService salaryService;
     private final ProjectionService projectionService;
     private final MortgageService mortgageService;
+    private final RentalPropertyService rentalPropertyService;
 
     private final Scanner scanner = new Scanner(System.in);
     private String accountNumber;
@@ -31,11 +34,13 @@ public class BankSimulationApp implements CommandLineRunner {
     public BankSimulationApp(BankAccountService bankAccountService,
                              SalaryService salaryService,
                              ProjectionService projectionService,
-                             MortgageService mortgageService) {
+                             MortgageService mortgageService,
+                             RentalPropertyService rentalPropertyService) {
         this.bankAccountService = bankAccountService;
         this.salaryService = salaryService;
         this.projectionService = projectionService;
         this.mortgageService = mortgageService;
+        this.rentalPropertyService = rentalPropertyService;
     }
 
     @Override
@@ -76,6 +81,16 @@ public class BankSimulationApp implements CommandLineRunner {
             if (mortgageService.hasActiveMortgages()) {
                 BigDecimal mortgageCharged = mortgageService.processMonthlyPayments(accountNumber);
                 System.out.printf("  Mortgage payment deducted: $%,.2f%n", mortgageCharged);
+            }
+
+            // Auto-process rental properties (income - expenses)
+            if (rentalPropertyService.hasProperties()) {
+                BigDecimal rentalNet = rentalPropertyService.processMonthlyRentals(accountNumber);
+                if (rentalNet.compareTo(BigDecimal.ZERO) >= 0) {
+                    System.out.printf("  Rental income (net):       +$%,.2f%n", rentalNet);
+                } else {
+                    System.out.printf("  Rental expenses (net):     -$%,.2f%n", rentalNet.negate());
+                }
             }
 
             printAccountInfo(month);
@@ -121,6 +136,8 @@ public class BankSimulationApp implements CommandLineRunner {
                     case "4" -> printAccountInfo(month);
                     case "5" -> takeOutMortgage();
                     case "6" -> viewActiveMortgages();
+                    case "7" -> addRentalProperty();
+                    case "8" -> viewRentalProperties();
                     case "0" -> endMonth = true;
                     case "q" -> {
                         System.out.println("Exiting simulation. Goodbye!");
@@ -150,6 +167,8 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("  4 - View account info");
         System.out.println("  5 - Take out a mortgage");
         System.out.println("  6 - View active mortgages");
+        System.out.println("  7 - Add a rental property");
+        System.out.println("  8 - View rental properties");
         System.out.println("  0 - Advance to next month");
         System.out.println("  q - Quit");
     }
@@ -257,6 +276,180 @@ public class BankSimulationApp implements CommandLineRunner {
             System.out.printf("    Months remaining:  %d%n", m.getMonthsRemaining());
             System.out.printf("    Equity in home:    $%,.2f%n", m.getEquity());
             System.out.printf("    Status:            %s%n", m.isFullyPaid() ? "PAID OFF" : "ACTIVE");
+        }
+        System.out.println("=============================");
+    }
+
+    private void addRentalProperty() {
+        System.out.println("\n--- Add Rental Property ---");
+
+        System.out.print("Property address: ");
+        String address = scanner.nextLine();
+
+        System.out.print("Property value ($): ");
+        BigDecimal propertyValue = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly rent ($): ");
+        BigDecimal monthlyRent = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Vacancy rate (e.g. 5 for 5%): ");
+        BigDecimal vacancyPct = scanner.nextBigDecimal();
+        scanner.nextLine();
+        BigDecimal vacancyRate = vacancyPct.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
+
+        System.out.print("Monthly property tax + insurance ($): ");
+        BigDecimal taxInsurance = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly maintenance reserve ($): ");
+        BigDecimal maintenance = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Property management rate (e.g. 10 for 10%, 0 if self-managed): ");
+        BigDecimal mgmtPct = scanner.nextBigDecimal();
+        scanner.nextLine();
+        BigDecimal mgmtRate = mgmtPct.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
+
+        System.out.print("Monthly utilities - landlord portion ($): ");
+        BigDecimal utilities = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly lawn care / snow removal ($): ");
+        BigDecimal lawnSnow = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly internet - if landlord-provided ($, 0 if tenant pays): ");
+        BigDecimal internet = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly electric - landlord portion ($, 0 if tenant pays): ");
+        BigDecimal electric = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly CapEx / major repair reserve ($): ");
+        BigDecimal capex = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        System.out.print("Monthly other misc expenses ($): ");
+        BigDecimal misc = scanner.nextBigDecimal();
+        scanner.nextLine();
+
+        // Ask if property has a mortgage
+        int mortgageIndex = -1;
+        System.out.print("Does this property have a mortgage? (y/n): ");
+        String hasMortgage = scanner.nextLine().trim().toLowerCase();
+        if (hasMortgage.equals("y")) {
+            List<ActiveMortgage> mortgages = mortgageService.getActiveMortgages();
+            if (mortgages.isEmpty()) {
+                System.out.println("No active mortgages. Use option 5 to take out a mortgage first.");
+            } else {
+                System.out.println("Link to which mortgage?");
+                for (int i = 0; i < mortgages.size(); i++) {
+                    ActiveMortgage m = mortgages.get(i);
+                    System.out.printf("  %d - %s ($%,.2f, $%,.2f/mo)%n",
+                            i + 1, m.getLoanType(), m.getHouseCost(), m.getMonthlyPayment());
+                }
+                System.out.print("> ");
+                int choice = scanner.nextInt();
+                scanner.nextLine();
+                if (choice >= 1 && choice <= mortgages.size()) {
+                    mortgageIndex = choice - 1;
+                } else {
+                    System.out.println("Invalid choice, property added without mortgage link.");
+                }
+            }
+        }
+
+        RentalProperty property = new RentalProperty(
+                address, propertyValue, monthlyRent,
+                vacancyRate, taxInsurance, maintenance, mgmtRate,
+                utilities, lawnSnow, internet, electric,
+                capex, misc, mortgageIndex
+        );
+
+        rentalPropertyService.addProperty(property);
+
+        // Show summary
+        BigDecimal estExpenses = property.getEstimatedMonthlyExpenses();
+        BigDecimal estCashFlow = property.getEstimatedMonthlyCashFlow();
+        BigDecimal mgmtFeeEst = monthlyRent.multiply(mgmtRate).setScale(2, java.math.RoundingMode.HALF_UP);
+
+        System.out.println("\n===== Rental Property Added =====");
+        System.out.printf("  Address:              %s%n", address);
+        System.out.printf("  Property value:       $%,.2f%n", propertyValue);
+        System.out.printf("  Monthly rent:         $%,.2f%n", monthlyRent);
+        System.out.printf("  Vacancy rate:         %.1f%%%n", vacancyPct);
+        System.out.printf("  Gross yield:          %s%%%n", property.getGrossYield());
+        System.out.println("  --- Monthly Expenses ---");
+        System.out.printf("  Tax + insurance:      $%,.2f%n", taxInsurance);
+        System.out.printf("  Maintenance reserve:  $%,.2f%n", maintenance);
+        System.out.printf("  Property management:  $%,.2f (%.0f%% of rent)%n", mgmtFeeEst, mgmtPct);
+        System.out.printf("  Utilities (landlord): $%,.2f%n", utilities);
+        System.out.printf("  Lawn/snow:            $%,.2f%n", lawnSnow);
+        System.out.printf("  Internet:             $%,.2f%n", internet);
+        System.out.printf("  Electric:             $%,.2f%n", electric);
+        System.out.printf("  CapEx reserve:        $%,.2f%n", capex);
+        System.out.printf("  Other misc:           $%,.2f%n", misc);
+        System.out.println("  ---------------------------");
+        System.out.printf("  Total expenses:       $%,.2f%n", estExpenses);
+        System.out.printf("  Est. net cash flow:   $%,.2f/mo (before mortgage)%n", estCashFlow);
+        if (mortgageIndex >= 0) {
+            ActiveMortgage linked = mortgageService.getActiveMortgages().get(mortgageIndex);
+            BigDecimal afterMortgage = estCashFlow.subtract(linked.getTotalMonthlyCharge());
+            System.out.printf("  After mortgage:       $%,.2f/mo%n", afterMortgage);
+        }
+        System.out.println("=================================");
+    }
+
+    private void viewRentalProperties() {
+        List<RentalProperty> properties = rentalPropertyService.getProperties();
+        if (properties.isEmpty()) {
+            System.out.println("\nNo rental properties.");
+            return;
+        }
+
+        System.out.println("\n===== Rental Properties =====");
+        for (int i = 0; i < properties.size(); i++) {
+            RentalProperty p = properties.get(i);
+            System.out.printf("%n  Property %d: %s%n", i + 1, p.getAddress());
+            System.out.printf("    Value:              $%,.2f%n", p.getPropertyValue());
+            System.out.printf("    Monthly rent:       $%,.2f%n", p.getMonthlyRent());
+            System.out.printf("    Gross yield:        %s%%%n", p.getGrossYield());
+            System.out.printf("    Vacancy rate:       %.1f%%  (actual: %s%% occupancy)%n",
+                    p.getVacancyRate().multiply(BigDecimal.valueOf(100)), p.getOccupancyRate());
+            System.out.println("    --- Monthly Breakdown ---");
+            System.out.printf("    Tax + insurance:    $%,.2f%n", p.getTaxAndInsurance());
+            System.out.printf("    Maintenance:        $%,.2f%n", p.getMaintenanceReserve());
+            BigDecimal mgmtFee = p.getMonthlyRent().multiply(p.getPropertyManagementRate())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            System.out.printf("    Prop. management:   $%,.2f%n", mgmtFee);
+            System.out.printf("    Utilities:          $%,.2f%n", p.getUtilitiesLandlord());
+            System.out.printf("    Lawn/snow:          $%,.2f%n", p.getLawnCareSnow());
+            System.out.printf("    Internet:           $%,.2f%n", p.getInternet());
+            System.out.printf("    Electric:           $%,.2f%n", p.getElectric());
+            System.out.printf("    CapEx reserve:      $%,.2f%n", p.getCapExReserve());
+            System.out.printf("    Other misc:         $%,.2f%n", p.getOtherMiscExpenses());
+            System.out.printf("    Total expenses:     $%,.2f%n", p.getEstimatedMonthlyExpenses());
+            System.out.printf("    Net cash flow:      $%,.2f/mo (before mortgage)%n", p.getEstimatedMonthlyCashFlow());
+
+            if (p.getMortgageIndex() >= 0) {
+                List<ActiveMortgage> mortgages = mortgageService.getActiveMortgages();
+                if (p.getMortgageIndex() < mortgages.size()) {
+                    ActiveMortgage linked = mortgages.get(p.getMortgageIndex());
+                    BigDecimal afterMortgage = p.getEstimatedMonthlyCashFlow().subtract(linked.getTotalMonthlyCharge());
+                    System.out.printf("    Linked mortgage:    $%,.2f/mo%n", linked.getTotalMonthlyCharge());
+                    System.out.printf("    After mortgage:     $%,.2f/mo%n", afterMortgage);
+                }
+            }
+
+            System.out.println("    --- Running Totals ---");
+            System.out.printf("    Months owned:       %d%n", p.getMonthsOwned());
+            System.out.printf("    Total rent:         $%,.2f%n", p.getTotalRentCollected());
+            System.out.printf("    Total expenses:     $%,.2f%n", p.getTotalExpensesPaid());
+            System.out.printf("    Vacancy loss:       $%,.2f (%d vacant months)%n",
+                    p.getTotalVacancyLoss(), p.getVacantMonths());
         }
         System.out.println("=============================");
     }

@@ -1,3 +1,4 @@
+com/InvestmentAccCalcEngine/domain/RentalProperty.class
 com/InvestmentAccCalcEngine/service/MortgageService.class
 com/mycompany/MyAppApplication.class
 com/InvestmentAccCalcEngine/service/loan/LoanType.class
@@ -5,9 +6,11 @@ com/InvestmentAccCalcEngine/domain/ActiveMortgage.class
 com/InvestmentAccCalcEngine/service/SalaryService.class
 com/InvestmentAccCalcEngine/domain/BankAccount.class
 com/InvestmentAccCalcEngine/domain/MonthlyProjection.class
+com/InvestmentAccCalcEngine/service/RentalPropertyService.class
 com/InvestmentAccCalcEngine/service/loan/StandardLoan.class
 com/InvestmentAccCalcEngine/service/TaxCalculator.class
 com/InvestmentAccCalcEngine/domain/MortgageSummary.class
 com/InvestmentAccCalcEngine/service/BankAccountService.class
+com/InvestmentAccCalcEngine/domain/RentalProperty$MonthlyRentalResult.class
 com/InvestmentAccCalcEngine/cli/BankSimulationApp.class
 com/InvestmentAccCalcEngine/service/ProjectionService.class
