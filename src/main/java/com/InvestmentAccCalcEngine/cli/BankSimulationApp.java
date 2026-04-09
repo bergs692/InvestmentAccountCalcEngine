@@ -10,11 +10,13 @@ import java.util.Scanner;
 import com.InvestmentAccCalcEngine.domain.MonthlyProjection;
 import com.InvestmentAccCalcEngine.domain.MortgageSummary;
 import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
+import com.InvestmentAccCalcEngine.domain.Property;
 import com.InvestmentAccCalcEngine.domain.RentalProperty;
 import com.InvestmentAccCalcEngine.service.BankAccountService;
 import com.InvestmentAccCalcEngine.service.SalaryService;
 import com.InvestmentAccCalcEngine.service.ProjectionService;
 import com.InvestmentAccCalcEngine.service.MortgageService;
+import com.InvestmentAccCalcEngine.service.PropertyService;
 import com.InvestmentAccCalcEngine.service.RentalPropertyService;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
 
@@ -26,6 +28,7 @@ public class BankSimulationApp implements CommandLineRunner {
     private final SalaryService salaryService;
     private final ProjectionService projectionService;
     private final MortgageService mortgageService;
+    private final PropertyService propertyService;
     private final RentalPropertyService rentalPropertyService;
 
     private final Scanner scanner = new Scanner(System.in);
@@ -35,11 +38,13 @@ public class BankSimulationApp implements CommandLineRunner {
                              SalaryService salaryService,
                              ProjectionService projectionService,
                              MortgageService mortgageService,
+                             PropertyService propertyService,
                              RentalPropertyService rentalPropertyService) {
         this.bankAccountService = bankAccountService;
         this.salaryService = salaryService;
         this.projectionService = projectionService;
         this.mortgageService = mortgageService;
+        this.propertyService = propertyService;
         this.rentalPropertyService = rentalPropertyService;
     }
 
@@ -138,6 +143,7 @@ public class BankSimulationApp implements CommandLineRunner {
                     case "6" -> viewActiveMortgages();
                     case "7" -> addRentalProperty();
                     case "8" -> viewRentalProperties();
+                    case "9" -> viewOwnedProperties();
                     case "0" -> endMonth = true;
                     case "q" -> {
                         System.out.println("Exiting simulation. Goodbye!");
@@ -167,14 +173,18 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("  4 - View account info");
         System.out.println("  5 - Take out a mortgage");
         System.out.println("  6 - View active mortgages");
-        System.out.println("  7 - Add a rental property");
+        System.out.println("  7 - Rent out a property");
         System.out.println("  8 - View rental properties");
+        System.out.println("  9 - View owned properties");
         System.out.println("  0 - Advance to next month");
         System.out.println("  q - Quit");
     }
 
     private void takeOutMortgage() {
         System.out.println("\n--- Take Out a Mortgage ---");
+
+        System.out.print("Property address: ");
+        String propertyAddress = scanner.nextLine();
 
         // Select loan type
         Map<String, LoanType> loanTypes = mortgageService.getAvailableLoanTypes();
@@ -231,8 +241,8 @@ public class BankSimulationApp implements CommandLineRunner {
 
         try {
             ActiveMortgage mortgage = mortgageService.takeOutMortgage(
-                    accountNumber, selectedType, houseCost, deposit, interestRate, termYears);
-            System.out.println("\nMortgage approved!");
+                    accountNumber, selectedType, houseCost, deposit, interestRate, termYears, propertyAddress);
+            System.out.println("\nMortgage approved! Property registered at: " + propertyAddress);
             System.out.printf("  Deposit of $%,.2f deducted from account.%n", deposit);
             System.out.printf("  $%,.2f mortgage payment each month for %d months.%n",
                     mortgage.getMonthlyPayment(), mortgage.getTotalMonths());
@@ -281,14 +291,42 @@ public class BankSimulationApp implements CommandLineRunner {
     }
 
     private void addRentalProperty() {
-        System.out.println("\n--- Add Rental Property ---");
+        System.out.println("\n--- Rent Out a Property ---");
 
-        System.out.print("Property address: ");
-        String address = scanner.nextLine();
+        // Must select from owned properties that aren't already rented
+        List<Property> available = propertyService.getAvailableForRental();
+        if (available.isEmpty()) {
+            System.out.println("No properties available to rent out.");
+            System.out.println("You need to own a property first (option 5 - Take out a mortgage).");
+            return;
+        }
 
-        System.out.print("Property value ($): ");
-        BigDecimal propertyValue = scanner.nextBigDecimal();
+        System.out.println("Select a property to rent out:");
+        List<Property> allProps = propertyService.getProperties();
+        for (int i = 0; i < allProps.size(); i++) {
+            Property p = allProps.get(i);
+            String status = p.isRentedOut() ? " [ALREADY RENTED]" : "";
+            System.out.printf("  %d - %s ($%,.2f)%s%n", i + 1, p.getAddress(), p.getPurchasePrice(), status);
+        }
+        System.out.print("> ");
+        int propChoice = scanner.nextInt();
         scanner.nextLine();
+
+        if (propChoice < 1 || propChoice > allProps.size()) {
+            System.out.println("Invalid choice.");
+            return;
+        }
+        Property selectedProp = allProps.get(propChoice - 1);
+        if (selectedProp.isRentedOut()) {
+            System.out.println("This property is already being rented out.");
+            return;
+        }
+
+        String address = selectedProp.getAddress();
+        BigDecimal propertyValue = selectedProp.getPurchasePrice();
+        int mortgageIndex = selectedProp.getMortgageIndex();
+
+        System.out.printf("%nSetting up rental for: %s ($%,.2f)%n", address, propertyValue);
 
         System.out.print("Monthly rent ($): ");
         BigDecimal monthlyRent = scanner.nextBigDecimal();
@@ -336,44 +374,20 @@ public class BankSimulationApp implements CommandLineRunner {
         BigDecimal misc = scanner.nextBigDecimal();
         scanner.nextLine();
 
-        // Ask if property has a mortgage
-        int mortgageIndex = -1;
-        System.out.print("Does this property have a mortgage? (y/n): ");
-        String hasMortgage = scanner.nextLine().trim().toLowerCase();
-        if (hasMortgage.equals("y")) {
-            List<ActiveMortgage> mortgages = mortgageService.getActiveMortgages();
-            if (mortgages.isEmpty()) {
-                System.out.println("No active mortgages. Use option 5 to take out a mortgage first.");
-            } else {
-                System.out.println("Link to which mortgage?");
-                for (int i = 0; i < mortgages.size(); i++) {
-                    ActiveMortgage m = mortgages.get(i);
-                    System.out.printf("  %d - %s ($%,.2f, $%,.2f/mo)%n",
-                            i + 1, m.getLoanType(), m.getHouseCost(), m.getMonthlyPayment());
-                }
-                System.out.print("> ");
-                int choice = scanner.nextInt();
-                scanner.nextLine();
-                if (choice >= 1 && choice <= mortgages.size()) {
-                    mortgageIndex = choice - 1;
-                } else {
-                    System.out.println("Invalid choice, property added without mortgage link.");
-                }
-            }
-        }
-
-        RentalProperty property = new RentalProperty(
+        RentalProperty rental = new RentalProperty(
                 address, propertyValue, monthlyRent,
                 vacancyRate, taxInsurance, maintenance, mgmtRate,
                 utilities, lawnSnow, internet, electric,
                 capex, misc, mortgageIndex
         );
 
-        rentalPropertyService.addProperty(property);
+        rentalPropertyService.addProperty(rental);
+        int rentalIndex = rentalPropertyService.getProperties().size() - 1;
+        selectedProp.setRentalIndex(rentalIndex);
 
         // Show summary
-        BigDecimal estExpenses = property.getEstimatedMonthlyExpenses();
-        BigDecimal estCashFlow = property.getEstimatedMonthlyCashFlow();
+        BigDecimal estExpenses = rental.getEstimatedMonthlyExpenses();
+        BigDecimal estCashFlow = rental.getEstimatedMonthlyCashFlow();
         BigDecimal mgmtFeeEst = monthlyRent.multiply(mgmtRate).setScale(2, java.math.RoundingMode.HALF_UP);
 
         System.out.println("\n===== Rental Property Added =====");
@@ -381,7 +395,7 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.printf("  Property value:       $%,.2f%n", propertyValue);
         System.out.printf("  Monthly rent:         $%,.2f%n", monthlyRent);
         System.out.printf("  Vacancy rate:         %.1f%%%n", vacancyPct);
-        System.out.printf("  Gross yield:          %s%%%n", property.getGrossYield());
+        System.out.printf("  Gross yield:          %s%%%n", rental.getGrossYield());
         System.out.println("  --- Monthly Expenses ---");
         System.out.printf("  Tax + insurance:      $%,.2f%n", taxInsurance);
         System.out.printf("  Maintenance reserve:  $%,.2f%n", maintenance);
@@ -450,6 +464,37 @@ public class BankSimulationApp implements CommandLineRunner {
             System.out.printf("    Total expenses:     $%,.2f%n", p.getTotalExpensesPaid());
             System.out.printf("    Vacancy loss:       $%,.2f (%d vacant months)%n",
                     p.getTotalVacancyLoss(), p.getVacantMonths());
+        }
+        System.out.println("=============================");
+    }
+
+    private void viewOwnedProperties() {
+        List<Property> properties = propertyService.getProperties();
+        if (properties.isEmpty()) {
+            System.out.println("\nNo owned properties.");
+            System.out.println("Take out a mortgage (option 5) to purchase a property.");
+            return;
+        }
+
+        System.out.println("\n===== Owned Properties =====");
+        for (int i = 0; i < properties.size(); i++) {
+            Property p = properties.get(i);
+            System.out.printf("%n  Property %d: %s%n", i + 1, p.getAddress());
+            System.out.printf("    Purchase price:    $%,.2f%n", p.getPurchasePrice());
+
+            // Show linked mortgage info
+            if (p.getMortgageIndex() >= 0) {
+                List<ActiveMortgage> mortgages = mortgageService.getActiveMortgages();
+                if (p.getMortgageIndex() < mortgages.size()) {
+                    ActiveMortgage m = mortgages.get(p.getMortgageIndex());
+                    System.out.printf("    Mortgage payment:  $%,.2f/mo%n", m.getTotalMonthlyCharge());
+                    System.out.printf("    Remaining balance: $%,.2f%n", m.getRemainingBalance());
+                    System.out.printf("    Equity:            $%,.2f%n", m.getEquity());
+                    System.out.printf("    Mortgage status:   %s%n", m.isFullyPaid() ? "PAID OFF" : "ACTIVE");
+                }
+            }
+
+            System.out.printf("    Rental status:     %s%n", p.isRentedOut() ? "RENTED OUT" : "NOT RENTED");
         }
         System.out.println("=============================");
     }

@@ -2,6 +2,7 @@ package com.InvestmentAccCalcEngine.service;
 
 import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
 import com.InvestmentAccCalcEngine.domain.MortgageSummary;
+import com.InvestmentAccCalcEngine.domain.Property;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
 import org.springframework.stereotype.Service;
 
@@ -16,15 +17,13 @@ public class MortgageService {
 
     private final Map<String, LoanType> loanTypes = new LinkedHashMap<>();
     private final BankAccountService bankAccountService;
+    private final PropertyService propertyService;
     private final List<ActiveMortgage> activeMortgages = new ArrayList<>();
 
-    /**
-     * Spring auto-injects all LoanType implementations.
-     * To add a new loan type, just create a new class implementing LoanType
-     * and annotate it with @Component — it'll appear here automatically.
-     */
-    public MortgageService(List<LoanType> loanTypeList, BankAccountService bankAccountService) {
+    public MortgageService(List<LoanType> loanTypeList, BankAccountService bankAccountService,
+                           PropertyService propertyService) {
         this.bankAccountService = bankAccountService;
+        this.propertyService = propertyService;
         for (int i = 0; i < loanTypeList.size(); i++) {
             loanTypes.put(String.valueOf(i + 1), loanTypeList.get(i));
         }
@@ -44,26 +43,19 @@ public class MortgageService {
         BigDecimal totalInterest = loanType.calculateTotalInterest(loanAmount, totalPayment);
 
         return new MortgageSummary(
-                loanType.getName(),
-                houseCost,
-                deposit,
-                loanAmount,
-                annualInterestRate,
-                termYears,
-                termMonths,
-                monthlyPayment,
-                totalPayment,
-                totalInterest
+                loanType.getName(), houseCost, deposit, loanAmount,
+                annualInterestRate, termYears, termMonths,
+                monthlyPayment, totalPayment, totalInterest
         );
     }
 
     /**
-     * Take out a mortgage — deducts the deposit from the bank account and
-     * registers an active mortgage that will be charged monthly.
+     * Take out a mortgage — deducts deposit, registers mortgage, creates Property.
      */
     public ActiveMortgage takeOutMortgage(String accountNumber, LoanType loanType,
                                           BigDecimal houseCost, BigDecimal deposit,
-                                          BigDecimal annualInterestRate, int termYears) {
+                                          BigDecimal annualInterestRate, int termYears,
+                                          String propertyAddress) {
         bankAccountService.charge(accountNumber, deposit);
 
         BigDecimal loanAmount = houseCost.subtract(deposit);
@@ -76,16 +68,16 @@ public class MortgageService {
         );
 
         activeMortgages.add(mortgage);
+        int mortgageIndex = activeMortgages.size() - 1;
+
+        // Auto-create a Property record for this purchase
+        propertyService.addProperty(propertyAddress, houseCost, mortgageIndex);
+
         return mortgage;
     }
 
-    /**
-     * Process monthly payments for all active mortgages.
-     * Returns total amount charged across all mortgages this month.
-     */
     public BigDecimal processMonthlyPayments(String accountNumber) {
         BigDecimal totalCharged = BigDecimal.ZERO;
-
         for (ActiveMortgage mortgage : activeMortgages) {
             if (!mortgage.isFullyPaid()) {
                 BigDecimal payment = mortgage.applyMonthlyPayment();
@@ -93,7 +85,6 @@ public class MortgageService {
                 totalCharged = totalCharged.add(payment);
             }
         }
-
         return totalCharged;
     }
 

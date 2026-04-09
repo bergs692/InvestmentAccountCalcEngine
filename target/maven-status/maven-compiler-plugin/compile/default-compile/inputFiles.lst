@@ -1,5 +1,7 @@
+/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/PropertyService.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/BankAccount.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/loan/MortgageSummary.java
+/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/Property.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/TaxCalculator.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/ActiveMortgage.java
 /Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/cli/BankSimulationApp.java
