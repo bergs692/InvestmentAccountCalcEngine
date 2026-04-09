@@ -1,5 +1,6 @@
 package com.InvestmentAccCalcEngine.cli;
 
+import com.InvestmentAccCalcEngine.service.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
@@ -12,13 +13,8 @@ import com.InvestmentAccCalcEngine.domain.MortgageSummary;
 import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
 import com.InvestmentAccCalcEngine.domain.Property;
 import com.InvestmentAccCalcEngine.domain.RentalProperty;
-import com.InvestmentAccCalcEngine.service.BankAccountService;
-import com.InvestmentAccCalcEngine.service.SalaryService;
-import com.InvestmentAccCalcEngine.service.ProjectionService;
-import com.InvestmentAccCalcEngine.service.MortgageService;
-import com.InvestmentAccCalcEngine.service.PropertyService;
-import com.InvestmentAccCalcEngine.service.RentalPropertyService;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
+import com.InvestmentAccCalcEngine.service.NetworthService;
 
 
 @Component
@@ -30,6 +26,7 @@ public class BankSimulationApp implements CommandLineRunner {
     private final MortgageService mortgageService;
     private final PropertyService propertyService;
     private final RentalPropertyService rentalPropertyService;
+    private final NetworthService networthService;
 
     private final Scanner scanner = new Scanner(System.in);
     private String accountNumber;
@@ -39,13 +36,15 @@ public class BankSimulationApp implements CommandLineRunner {
                              ProjectionService projectionService,
                              MortgageService mortgageService,
                              PropertyService propertyService,
-                             RentalPropertyService rentalPropertyService) {
+                             RentalPropertyService rentalPropertyService,
+                             NetworthService networthService) {
         this.bankAccountService = bankAccountService;
         this.salaryService = salaryService;
         this.projectionService = projectionService;
         this.mortgageService = mortgageService;
         this.propertyService = propertyService;
         this.rentalPropertyService = rentalPropertyService;
+        this.networthService = networthService;
     }
 
     @Override
@@ -97,6 +96,9 @@ public class BankSimulationApp implements CommandLineRunner {
                     System.out.printf("  Rental expenses (net):     -$%,.2f%n", rentalNet.negate());
                 }
             }
+
+            // Calculate New Networth and track it.
+            networthService.trackNetworth(accountNumber);
 
             printAccountInfo(month);
             printMenu();
@@ -161,8 +163,10 @@ public class BankSimulationApp implements CommandLineRunner {
 
     private void printAccountInfo(int month) {
         BigDecimal balance = bankAccountService.getBalance(accountNumber);
+        BigDecimal networth = networthService.getPrevNetworth();
         System.out.println("\n--- Account Summary (Month " + month + ") ---");
         System.out.printf("Balance: $%.2f%n", balance);
+        System.out.printf("Networth: $%.2f%n", networth);
     }
 
     private void printMenu() {

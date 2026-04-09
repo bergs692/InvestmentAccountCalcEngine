@@ -1,17 +1,18 @@
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/PropertyService.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/BankAccount.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/loan/MortgageSummary.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/Property.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/TaxCalculator.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/ActiveMortgage.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/cli/BankSimulationApp.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/MonthlyProjection.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/MortgageService.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/SalaryService.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/MyAppApplication.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/loan/StandardLoan.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/ProjectionService.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/BankAccountService.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/domain/RentalProperty.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/RentalPropertyService.java
-/Users/jonah.applehome/Investments Research/InvestmentAccCalcEngine/src/main/java/com/InvestmentAccCalcEngine/service/loan/LoanType.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\domain\BankAccount.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\loan\LoanType.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\cli\BankSimulationApp.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\MyAppApplication.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\PropertyService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\loan\MortgageSummary.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\RentalPropertyService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\domain\Property.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\BankAccountService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\MortgageService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\TaxCalculator.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\ProjectionService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\domain\MonthlyProjection.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\domain\RentalProperty.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\domain\ActiveMortgage.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\NetworthService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\SalaryService.java
+C:\Users\bergs\Git\InvestmentAccountCalcEngine\src\main\java\com\InvestmentAccCalcEngine\service\loan\StandardLoan.java
