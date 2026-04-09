@@ -23,11 +23,12 @@ import java.math.RoundingMode;
  *
  * Mortgage is tracked separately via ActiveMortgage and linked by mortgageIndex.
  */
+@Setter
 @Getter
 public class RentalProperty {
     private final String address;
-    private final BigDecimal propertyValue;
-    private final BigDecimal monthlyRent;
+    private BigDecimal propertyValue;
+    private BigDecimal monthlyRent;
 
     // Expense fields (monthly amounts, stored as positive values)
     private final BigDecimal vacancyRate;           // e.g. 0.05 = 5% vacancy
@@ -44,6 +45,8 @@ public class RentalProperty {
     // Linked mortgage (index into MortgageService's activeMortgages list, -1 if none)
     private final int mortgageIndex;
 
+    private final Property property;
+
     // Running totals
     private BigDecimal totalRentCollected;
     private BigDecimal totalExpensesPaid;
@@ -57,7 +60,7 @@ public class RentalProperty {
                           BigDecimal utilitiesLandlord, BigDecimal lawnCareSnow,
                           BigDecimal internet, BigDecimal electric,
                           BigDecimal capExReserve, BigDecimal otherMiscExpenses,
-                          int mortgageIndex) {
+                          int mortgageIndex, Property property) {
         this.address = address;
         this.propertyValue = propertyValue;
         this.monthlyRent = monthlyRent;
@@ -72,6 +75,7 @@ public class RentalProperty {
         this.capExReserve = capExReserve;
         this.otherMiscExpenses = otherMiscExpenses;
         this.mortgageIndex = mortgageIndex;
+        this.property = property;
 
         this.totalRentCollected = BigDecimal.ZERO;
         this.totalExpensesPaid = BigDecimal.ZERO;

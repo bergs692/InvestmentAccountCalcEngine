@@ -1,4 +1,4 @@
-package com.mycompany;
+package com.InvestmentAccCalcEngine;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

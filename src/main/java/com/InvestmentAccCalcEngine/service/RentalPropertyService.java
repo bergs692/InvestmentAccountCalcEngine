@@ -53,6 +53,15 @@ public class RentalPropertyService {
         return totalNet;
     }
 
+    public void applyYearlyRentIncreases(BigDecimal rentRate){
+        for (RentalProperty p : properties) {
+            // get rental properties new property value and set rent accordingly
+            BigDecimal propertyValue = p.getProperty().getCurrentMarketValue();
+            p.setMonthlyRent(propertyValue.multiply(rentRate));
+            p.setPropertyValue(propertyValue);
+        }
+    }
+
     /**
      * Total estimated monthly cash flow across all properties (for projections).
      */

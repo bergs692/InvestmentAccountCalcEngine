@@ -4,6 +4,7 @@ import com.InvestmentAccCalcEngine.service.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -31,6 +32,12 @@ public class BankSimulationApp implements CommandLineRunner {
     private final Scanner scanner = new Scanner(System.in);
     private String accountNumber;
 
+
+    private final BigDecimal annualAppreciationRate; // e.g. 3.5 for 3.5%
+    private final BigDecimal rentRate; // e.g. 0.008 for 8%
+    private final BigDecimal salaryMeritIncreaseRate; // e.g. 0.035 for 3.5%
+
+
     public BankSimulationApp(BankAccountService bankAccountService,
                              SalaryService salaryService,
                              ProjectionService projectionService,
@@ -45,6 +52,11 @@ public class BankSimulationApp implements CommandLineRunner {
         this.propertyService = propertyService;
         this.rentalPropertyService = rentalPropertyService;
         this.networthService = networthService;
+
+        // Global Variables (Config)
+        this.annualAppreciationRate = BigDecimal.valueOf(3.5); // e.g. 3.5 for 3.5%
+        this.rentRate = BigDecimal.valueOf(0.008); // e.g. 0.008 for 8%
+        this.salaryMeritIncreaseRate = BigDecimal.valueOf(0.035); // e.g. 0.035 for 3.5%
     }
 
     @Override
@@ -52,19 +64,23 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("=== Bank Account Simulator ===");
 
         // Setup
-        System.out.print("Enter your name: ");
-        String name = scanner.nextLine();
+        System.out.println("Enter your name: ");
+        //String name = scanner.nextLine();
+        String name = "Jonah Brian Bergstrom";
 
-        System.out.print("Enter account number: ");
-        accountNumber = scanner.nextLine();
+        System.out.println("Enter account number: ");
+        //accountNumber = scanner.nextLine();
+        accountNumber = "5791160";
 
-        System.out.print("Enter starting balance: ");
-        BigDecimal startingBalance = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Enter starting balance: ");
+        //BigDecimal startingBalance = scanner.nextBigDecimal();
+        BigDecimal startingBalance = BigDecimal.valueOf(16000);
+        //scanner.nextLine();
 
-        System.out.print("Enter your annual salary: ");
-        BigDecimal annualSalary = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Enter your annual salary: ");
+        //BigDecimal annualSalary = scanner.nextBigDecimal();
+        BigDecimal annualSalary = BigDecimal.valueOf(87000);
+        //scanner.nextLine();
 
         bankAccountService.createAccount(accountNumber, name, startingBalance);
         BigDecimal monthlyTakeHome = salaryService.calculateMonthlyAfterTax(annualSalary);
@@ -73,10 +89,30 @@ public class BankSimulationApp implements CommandLineRunner {
 
         // Month loop
         int month = 1;
+
+        // Year loop calculated by modding month by 12.
+        int year = 1;
+
+        // Auto advancing with 0* case variable
+        int autoAdvanceRemaining = 0;
+
         while (true) {
             System.out.println("\n=============================");
             System.out.println(" Month " + month);
             System.out.println("=============================");
+
+            // Apply Monthly Property Appreciation
+            propertyService.applyMonthlyAppreciation(annualAppreciationRate);
+
+            // Apply Yearly Changes
+            if (month % 12 == 0){
+                year += 1;
+
+                // Adjust Rent Payment if year has gone by.
+                rentalPropertyService.applyYearlyRentIncreases(rentRate);
+                // Adjust Salary
+                annualSalary = annualSalary.multiply(BigDecimal.valueOf(1).add(salaryMeritIncreaseRate));
+            }
 
             // Apply monthly salary
             bankAccountService.deposit(accountNumber, monthlyTakeHome);
@@ -86,6 +122,10 @@ public class BankSimulationApp implements CommandLineRunner {
                 BigDecimal mortgageCharged = mortgageService.processMonthlyPayments(accountNumber);
                 System.out.printf("  Mortgage payment deducted: $%,.2f%n", mortgageCharged);
             }
+
+
+
+
 
             // Auto-process rental properties (income - expenses)
             if (rentalPropertyService.hasProperties()) {
@@ -97,6 +137,8 @@ public class BankSimulationApp implements CommandLineRunner {
                 }
             }
 
+
+
             // Calculate New Networth and track it.
             networthService.trackNetworth(accountNumber);
 
@@ -105,56 +147,68 @@ public class BankSimulationApp implements CommandLineRunner {
 
             boolean endMonth = false;
             while (!endMonth) {
-                System.out.print("> ");
-                String input = scanner.nextLine().trim();
+                if (autoAdvanceRemaining > 0) {
+                    autoAdvanceRemaining--;
+                    endMonth = true;
+                } else {
+                    System.out.print("> ");
+                    String input = scanner.nextLine().trim();
 
-                switch (input) {
-                    case "1" -> {
-                        System.out.print("Charge amount: ");
-                        BigDecimal amount = scanner.nextBigDecimal();
-                        scanner.nextLine();
-                        System.out.print("Description: ");
-                        String desc = scanner.nextLine();
-                        bankAccountService.charge(accountNumber, amount);
-                        System.out.printf("Charged $%.2f for %s%n", amount, desc);
-                        printAccountInfo(month);
-                    }
-                    case "2" -> {
-                        System.out.print("Deposit amount: ");
-                        BigDecimal amount = scanner.nextBigDecimal();
-                        scanner.nextLine();
-                        bankAccountService.deposit(accountNumber, amount);
-                        System.out.printf("Deposited $%.2f%n", amount);
-                        printAccountInfo(month);
-                    }
-                    case "3" -> {
-                        System.out.print("Project how many months ahead? ");
-                        int months = scanner.nextInt();
-                        scanner.nextLine();
-                        System.out.print("Enter total monthly payments/outgoings: ");
-                        BigDecimal payments = scanner.nextBigDecimal();
-                        scanner.nextLine();
-                        List<MonthlyProjection> projections = projectionService.projectBalance(
+                    switch (input) {
+                        case "1" -> {
+                            System.out.print("Charge amount: ");
+                            BigDecimal amount = scanner.nextBigDecimal();
+                            scanner.nextLine();
+                            System.out.print("Description: ");
+                            String desc = scanner.nextLine();
+                            bankAccountService.charge(accountNumber, amount);
+                            System.out.printf("Charged $%.2f for %s%n", amount, desc);
+                            printAccountInfo(month);
+                        }
+                        case "2" -> {
+                            System.out.print("Deposit amount: ");
+                            BigDecimal amount = scanner.nextBigDecimal();
+                            scanner.nextLine();
+                            bankAccountService.deposit(accountNumber, amount);
+                            System.out.printf("Deposited $%.2f%n", amount);
+                            printAccountInfo(month);
+                        }
+                        case "3" -> {
+                            System.out.print("Project how many months ahead? ");
+                            int months = scanner.nextInt();
+                            scanner.nextLine();
+                            System.out.print("Enter total monthly payments/outgoings: ");
+                            BigDecimal payments = scanner.nextBigDecimal();
+                            scanner.nextLine();
+                            List<MonthlyProjection> projections = projectionService.projectBalance(
                                 accountNumber, annualSalary, List.of(payments), months);
-                        System.out.println("\n--- Projection ---");
-                        projections.forEach(p -> System.out.printf(
+                            System.out.println("\n--- Projection ---");
+                            projections.forEach(p -> System.out.printf(
                                 "Month %d: $%.2f%n", p.getMonth(), p.getProjectedBalance()));
+                        }
+                        case "4" -> printAccountInfo(month);
+                        case "5" -> takeOutMortgage();
+                        case "6" -> viewActiveMortgages();
+                        case "7" -> addRentalProperty();
+                        case "8" -> viewRentalProperties();
+                        case "9" -> viewOwnedProperties();
+                        case "0" -> endMonth = true;
+                        case "0*" -> {
+                            System.out.print("How many months to skip ahead? ");
+                            autoAdvanceRemaining = scanner.nextInt();
+                            scanner.nextLine();
+                            endMonth = true;
+                        }
+                        case "nh" -> viewNetworthHistory();
+                        case "q" -> {
+                            System.out.println("Exiting simulation. Goodbye!");
+                            return;
+                        }
+                        default -> System.out.println("Unknown command, try again.");
                     }
-                    case "4" -> printAccountInfo(month);
-                    case "5" -> takeOutMortgage();
-                    case "6" -> viewActiveMortgages();
-                    case "7" -> addRentalProperty();
-                    case "8" -> viewRentalProperties();
-                    case "9" -> viewOwnedProperties();
-                    case "0" -> endMonth = true;
-                    case "q" -> {
-                        System.out.println("Exiting simulation. Goodbye!");
-                        return;
-                    }
-                    default -> System.out.println("Unknown command, try again.");
-                }
 
-                if (!endMonth) printMenu();
+                    if (!endMonth) printMenu();
+                }
             }
 
             month++;
@@ -182,6 +236,7 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("  9 - View owned properties");
         System.out.println("  0 - Advance to next month");
         System.out.println("  q - Quit");
+        System.out.println("  nh - View Networth History");
     }
 
     private void takeOutMortgage() {
@@ -332,57 +387,74 @@ public class BankSimulationApp implements CommandLineRunner {
 
         System.out.printf("%nSetting up rental for: %s ($%,.2f)%n", address, propertyValue);
 
-        System.out.print("Monthly rent ($): ");
-        BigDecimal monthlyRent = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly rent ($): ");
+        //BigDecimal monthlyRent = scanner.nextBigDecimal();
+        BigDecimal monthlyRent = selectedProp.getPurchasePrice().multiply(rentRate);
+        //System.out.println(monthlyRent);
 
-        System.out.print("Vacancy rate (e.g. 5 for 5%): ");
-        BigDecimal vacancyPct = scanner.nextBigDecimal();
-        scanner.nextLine();
+
+        System.out.println("Vacancy rate (e.g. 5 for 5%): ");
+        //BigDecimal vacancyPct = scanner.nextBigDecimal();
+        BigDecimal vacancyPct = BigDecimal.valueOf(8);
+        //scanner.nextLine();
         BigDecimal vacancyRate = vacancyPct.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
 
-        System.out.print("Monthly property tax + insurance ($): ");
-        BigDecimal taxInsurance = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly property tax + insurance ($): ");
+        //BigDecimal taxInsurance = scanner.nextBigDecimal();
+        BigDecimal taxInsurance = selectedProp.getPurchasePrice().multiply(BigDecimal.valueOf(0.02)).divide(BigDecimal.valueOf(12),java.math.RoundingMode.HALF_UP);
+        //scanner.nextLine();
 
-        System.out.print("Monthly maintenance reserve ($): ");
-        BigDecimal maintenance = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly maintenance reserve ($): ");
+        //BigDecimal maintenance = scanner.nextBigDecimal();
+        BigDecimal maintenance = selectedProp.getPurchasePrice().multiply(BigDecimal.valueOf(0.015)).divide(BigDecimal.valueOf(12),java.math.RoundingMode.HALF_UP);
 
-        System.out.print("Property management rate (e.g. 10 for 10%, 0 if self-managed): ");
-        BigDecimal mgmtPct = scanner.nextBigDecimal();
-        scanner.nextLine();
+        //scanner.nextLine();
+
+        System.out.println("Property management rate (e.g. 10 for 10%, 0 if self-managed): ");
+        //BigDecimal mgmtPct = scanner.nextBigDecimal();
+        BigDecimal mgmtPct = BigDecimal.ZERO;
+
+        //scanner.nextLine();
         BigDecimal mgmtRate = mgmtPct.divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP);
 
-        System.out.print("Monthly utilities - landlord portion ($): ");
-        BigDecimal utilities = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly utilities - landlord portion ($): ");
+        //BigDecimal utilities = scanner.nextBigDecimal();
+        BigDecimal utilities = BigDecimal.ZERO;
+        //scanner.nextLine();
 
-        System.out.print("Monthly lawn care / snow removal ($): ");
-        BigDecimal lawnSnow = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly lawn care / snow removal ($): ");
+        //BigDecimal lawnSnow = scanner.nextBigDecimal();
+        BigDecimal lawnSnow = BigDecimal.valueOf(100);
 
-        System.out.print("Monthly internet - if landlord-provided ($, 0 if tenant pays): ");
-        BigDecimal internet = scanner.nextBigDecimal();
-        scanner.nextLine();
+        //scanner.nextLine();
 
-        System.out.print("Monthly electric - landlord portion ($, 0 if tenant pays): ");
-        BigDecimal electric = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly internet - if landlord-provided ($, 0 if tenant pays): ");
+        //BigDecimal internet = scanner.nextBigDecimal();
+        BigDecimal internet = BigDecimal.ZERO;
+        //scanner.nextLine();
 
-        System.out.print("Monthly CapEx / major repair reserve ($): ");
-        BigDecimal capex = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly electric - landlord portion ($, 0 if tenant pays): ");
+        //BigDecimal electric = scanner.nextBigDecimal();
+        BigDecimal electric = BigDecimal.ZERO;
+        //scanner.nextLine();
 
-        System.out.print("Monthly other misc expenses ($): ");
-        BigDecimal misc = scanner.nextBigDecimal();
-        scanner.nextLine();
+        System.out.println("Monthly CapEx / major repair reserve ($): ");
+        //BigDecimal capex = scanner.nextBigDecimal();
+        BigDecimal capex = selectedProp.getPurchasePrice().multiply(BigDecimal.valueOf(0.015)).divide(BigDecimal.valueOf(12),java.math.RoundingMode.HALF_UP);
+
+        //scanner.nextLine();
+
+        System.out.println("Monthly other misc expenses ($): ");
+        //BigDecimal misc = scanner.nextBigDecimal();
+        BigDecimal misc = monthlyRent.multiply(BigDecimal.valueOf(0.033));
+
+        //scanner.nextLine();
 
         RentalProperty rental = new RentalProperty(
                 address, propertyValue, monthlyRent,
                 vacancyRate, taxInsurance, maintenance, mgmtRate,
                 utilities, lawnSnow, internet, electric,
-                capex, misc, mortgageIndex
+                capex, misc, mortgageIndex, selectedProp
         );
 
         rentalPropertyService.addProperty(rental);
@@ -499,6 +571,27 @@ public class BankSimulationApp implements CommandLineRunner {
             }
 
             System.out.printf("    Rental status:     %s%n", p.isRentedOut() ? "RENTED OUT" : "NOT RENTED");
+        }
+        System.out.println("=============================");
+    }
+
+    private void viewNetworthHistory() {
+        ArrayList<BigDecimal> history = networthService.getNetworthHistory();
+        if (history.isEmpty()) {
+            System.out.println("\nNo networth history available.");
+            return;
+        }
+
+        System.out.println("\n===== Networth History =====");
+        for (int i = 0; i < history.size(); i++) {
+            BigDecimal value = history.get(i);
+            if (i == 0) {
+                System.out.printf("  Month %3d:  $%,.2f%n", i + 1, value);
+            } else {
+                BigDecimal change = value.subtract(history.get(i - 1));
+                String sign = change.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
+                System.out.printf("  Month %3d:  $%,.2f  (%s$%,.2f)%n", i + 1, value, sign, change);
+            }
         }
         System.out.println("=============================");
     }
