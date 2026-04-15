@@ -18,27 +18,47 @@ public class NetworthService {
 
     private final BankAccountService bankAccountService;
     private final MortgageService mortgageService;
+    private final PropertyService propertyService;
     @Getter
     private final ArrayList<BigDecimal> networthHistory = new ArrayList<BigDecimal>();
     @Getter
     private BigDecimal prevNetworth = BigDecimal.ZERO;
 
-    public NetworthService(SalaryService salaryService, BankAccountService bankAccountService,
-                           MortgageService mortgageService, RentalPropertyService rentalPropertyService) {
+    public NetworthService(BankAccountService bankAccountService,
+                           MortgageService mortgageService,
+                           PropertyService propertyService) {
         this.bankAccountService = bankAccountService;
         this.mortgageService = mortgageService;
+        this.propertyService = propertyService;
     }
 
-    public BigDecimal calculateNetworth(String accountNumber){
-        BigDecimal networth =  bankAccountService.getBalance(accountNumber);
+    public BigDecimal calculateNetworth(String accountNumber) {
+        BigDecimal networth = bankAccountService.getBalance(accountNumber);
 
-        BigDecimal equityTotal = BigDecimal.ZERO;
-        List <ActiveMortgage> mortgages = mortgageService.getActiveMortgages();
-
-        for (ActiveMortgage AM : mortgages){
-            equityTotal = equityTotal.add(AM.getEquity());
+        List<Property> properties = propertyService.getAllProperties();
+        for (Property p : properties) {
+            ActiveMortgage mortgage = mortgageService.getMortgage(p.getMortgageIndex());
+            networth = networth.add(mortgage.getEquity(p.getCurrentMarketValue()));
         }
-        prevNetworth = networth.add(equityTotal);
+
+        prevNetworth = networth;
+        return prevNetworth;
+    }
+
+    /**
+     * Recalculate and update prevNetworth without adding a history entry.
+     * Use after mid-month events like selling a property.
+     */
+    public BigDecimal recalculateNetworth(String accountNumber) {
+        BigDecimal networth = bankAccountService.getBalance(accountNumber);
+
+        List<Property> properties = propertyService.getAllProperties();
+        for (Property p : properties) {
+            ActiveMortgage mortgage = mortgageService.getMortgage(p.getMortgageIndex());
+            networth = networth.add(mortgage.getEquity(p.getCurrentMarketValue()));
+        }
+
+        prevNetworth = networth;
         return prevNetworth;
     }
 

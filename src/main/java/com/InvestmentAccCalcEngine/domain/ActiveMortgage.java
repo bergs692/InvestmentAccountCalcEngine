@@ -111,6 +111,15 @@ public class ActiveMortgage {
     }
 
     /**
+     * Pay off the mortgage in full (e.g. when selling the property).
+     */
+    public void payOff() {
+        this.remainingBalance = BigDecimal.ZERO;
+        this.pmiActive = false;
+        this.monthsPaid = this.totalMonths;
+    }
+
+    /**
      * Minnesota law allows borrowers to request PMI cancellation at 80% LTV
      * based on the home's current market value (not just original purchase price).
      * Call this to manually cancel PMI if you believe you've hit 80% LTV.
@@ -125,11 +134,6 @@ public class ActiveMortgage {
             return true;
         }
         return false;
-    }
-
-    public BigDecimal getCurrentLtv() {
-        return remainingBalance.divide(houseCost, 4, RoundingMode.HALF_UP)
-                .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -147,7 +151,12 @@ public class ActiveMortgage {
         return totalMonths - monthsPaid;
     }
 
-    public BigDecimal getEquity() {
-        return houseCost.subtract(remainingBalance);
+    public BigDecimal getEquity(BigDecimal currentMarketValue) {
+        return currentMarketValue.subtract(remainingBalance);
+    }
+
+    public BigDecimal getCurrentLtv(BigDecimal currentMarketValue) {
+        return remainingBalance.divide(currentMarketValue, 4, RoundingMode.HALF_UP)
+            .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP);
     }
 }

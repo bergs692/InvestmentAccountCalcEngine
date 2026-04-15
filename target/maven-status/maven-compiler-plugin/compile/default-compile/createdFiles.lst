@@ -11,9 +11,9 @@ com\InvestmentAccCalcEngine\cli\BankSimulationApp.class
 com\InvestmentAccCalcEngine\service\RentalPropertyService.class
 com\InvestmentAccCalcEngine\domain\RentalProperty$MonthlyRentalResult.class
 com\InvestmentAccCalcEngine\service\SalaryService.class
-com\mycompany\MyAppApplication.class
 com\InvestmentAccCalcEngine\service\PropertyService.class
 com\InvestmentAccCalcEngine\service\loan\LoanType.class
 com\InvestmentAccCalcEngine\service\ProjectionService.class
+com\InvestmentAccCalcEngine\MyAppApplication.class
 com\InvestmentAccCalcEngine\service\loan\StandardLoan.class
 com\InvestmentAccCalcEngine\domain\ActiveMortgage.class

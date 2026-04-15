@@ -32,15 +32,15 @@ public class RentalProperty {
 
     // Expense fields (monthly amounts, stored as positive values)
     private final BigDecimal vacancyRate;           // e.g. 0.05 = 5% vacancy
-    private final BigDecimal taxAndInsurance;        // monthly property tax + homeowner's insurance
-    private final BigDecimal maintenanceReserve;     // monthly maintenance set-aside
+    private BigDecimal taxAndInsurance;        // monthly property tax + homeowner's insurance
+    private BigDecimal maintenanceReserve;     // monthly maintenance set-aside
     private final BigDecimal propertyManagementRate; // e.g. 0.10 = 10% of rent
     private final BigDecimal utilitiesLandlord;      // landlord-paid utilities (not tenant-offset)
     private final BigDecimal lawnCareSnow;           // lawn care / snow removal (MN winters!)
     private final BigDecimal internet;               // if landlord provides internet
     private final BigDecimal electric;               // landlord-paid electric
-    private final BigDecimal capExReserve;           // capital expenditure / major repair reserve
-    private final BigDecimal otherMiscExpenses;      // catch-all for other costs
+    private BigDecimal capExReserve;           // capital expenditure / major repair reserve
+    private BigDecimal otherMiscExpenses;      // catch-all for other costs
 
     // Linked mortgage (index into MortgageService's activeMortgages list, -1 if none)
     private final int mortgageIndex;
@@ -125,6 +125,29 @@ public class RentalProperty {
 
         return new MonthlyRentalResult(occupied, rentThisMonth, totalExpenses, mgmtFee, netCashFlow);
     }
+
+    /**
+     * Recalculate expenses that are derived from property value.
+     * Call yearly after property appreciation is applied.
+     *
+     * Uses the same rates from initial setup:
+     *   - Tax + insurance: 2% of value / 12
+     *   - Maintenance:     1.5% of value / 12
+     *   - CapEx reserve:   1.5% of value / 12
+     *   - Other misc:      3.3% of monthly rent
+     */
+    public void recalculateExpensesFromValue(BigDecimal currentValue, BigDecimal currentRent) {
+        this.taxAndInsurance = currentValue.multiply(new BigDecimal("0.02"))
+            .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+        this.maintenanceReserve = currentValue.multiply(new BigDecimal("0.015"))
+            .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+        this.capExReserve = currentValue.multiply(new BigDecimal("0.015"))
+            .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
+        this.otherMiscExpenses = currentRent.multiply(new BigDecimal("0.033"))
+            .setScale(2, RoundingMode.HALF_UP);
+    }
+
+
 
     /**
      * Total landlord expenses per month (assuming occupied, for display/projection).

@@ -53,12 +53,13 @@ public class RentalPropertyService {
         return totalNet;
     }
 
-    public void applyYearlyRentIncreases(BigDecimal rentRate){
+    public void applyYearlyRentIncreases(BigDecimal rentRate) {
         for (RentalProperty p : properties) {
-            // get rental properties new property value and set rent accordingly
             BigDecimal propertyValue = p.getProperty().getCurrentMarketValue();
-            p.setMonthlyRent(propertyValue.multiply(rentRate));
+            BigDecimal newRent = propertyValue.multiply(rentRate);
+            p.setMonthlyRent(newRent);
             p.setPropertyValue(propertyValue);
+            p.recalculateExpensesFromValue(propertyValue, newRent);
         }
     }
 
@@ -71,5 +72,15 @@ public class RentalPropertyService {
             total = total.add(p.getEstimatedMonthlyCashFlow());
         }
         return total;
+    }
+
+    public void removeProperty(int index) {
+        if (index < 0 || index >= properties.size()) {
+            throw new IllegalArgumentException("Invalid rental property index: " + index);
+        }
+        properties.remove(index);
+
+        // Update rentalIndex on any Property whose rentalIndex shifted
+        // (handled by caller if needed)
     }
 }

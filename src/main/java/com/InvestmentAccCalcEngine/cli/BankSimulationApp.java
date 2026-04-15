@@ -74,7 +74,7 @@ public class BankSimulationApp implements CommandLineRunner {
 
         System.out.println("Enter starting balance: ");
         //BigDecimal startingBalance = scanner.nextBigDecimal();
-        BigDecimal startingBalance = BigDecimal.valueOf(16000);
+        BigDecimal startingBalance = BigDecimal.valueOf(80000);
         //scanner.nextLine();
 
         System.out.println("Enter your annual salary: ");
@@ -113,6 +113,8 @@ public class BankSimulationApp implements CommandLineRunner {
                 // Adjust Salary
                 annualSalary = annualSalary.multiply(BigDecimal.valueOf(1).add(salaryMeritIncreaseRate));
             }
+            // Recalculate paycheck
+            monthlyTakeHome = salaryService.calculateMonthlyAfterTax(annualSalary);
 
             // Apply monthly salary
             bankAccountService.deposit(accountNumber, monthlyTakeHome);
@@ -192,6 +194,7 @@ public class BankSimulationApp implements CommandLineRunner {
                         case "7" -> addRentalProperty();
                         case "8" -> viewRentalProperties();
                         case "9" -> viewOwnedProperties();
+                        case "10" -> sellProperty();
                         case "0" -> endMonth = true;
                         case "0*" -> {
                             System.out.print("How many months to skip ahead? ");
@@ -235,6 +238,7 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("  8 - View rental properties");
         System.out.println("  9 - View owned properties");
         System.out.println("  0 - Advance to next month");
+        System.out.println("  10 - Sell a property");
         System.out.println("  q - Quit");
         System.out.println("  nh - View Networth History");
     }
@@ -257,12 +261,12 @@ public class BankSimulationApp implements CommandLineRunner {
             return;
         }
 
-        System.out.print("House cost ($): ");
-        BigDecimal houseCost = scanner.nextBigDecimal();
+        System.out.print("House cost ($) in Thousands: ");
+        BigDecimal houseCost = scanner.nextBigDecimal().multiply(BigDecimal.valueOf(1000));
         scanner.nextLine();
 
-        System.out.print("Deposit amount ($): ");
-        BigDecimal deposit = scanner.nextBigDecimal();
+        System.out.print("Deposit amount ($) in Thousands: ");
+        BigDecimal deposit = scanner.nextBigDecimal().multiply(BigDecimal.valueOf(1000));
         scanner.nextLine();
 
         System.out.print("Annual interest rate (%): ");
@@ -333,7 +337,8 @@ public class BankSimulationApp implements CommandLineRunner {
             System.out.printf("    House cost:        $%,.2f%n", m.getHouseCost());
             System.out.printf("    Original loan:     $%,.2f%n", m.getOriginalLoanAmount());
             System.out.printf("    Remaining balance: $%,.2f%n", m.getRemainingBalance());
-            System.out.printf("    Current LTV:       %s%%%n", m.getCurrentLtv());
+            Property linkedProperty = propertyService.getPropertyByMortgageIndex(i);
+            System.out.printf("    Current LTV:       %s%%%n", m.getCurrentLtv(linkedProperty.getCurrentMarketValue()));
             System.out.printf("    Monthly payment:   $%,.2f%n", m.getMonthlyPayment());
             if (m.isPmiRequired()) {
                 System.out.printf("    PMI status:        %s%n", m.isPmiActive() ? "ACTIVE" : "CANCELLED");
@@ -343,7 +348,7 @@ public class BankSimulationApp implements CommandLineRunner {
             System.out.printf("    Total monthly:     $%,.2f%n", m.getTotalMonthlyCharge());
             System.out.printf("    Months paid:       %d / %d%n", m.getMonthsPaid(), m.getTotalMonths());
             System.out.printf("    Months remaining:  %d%n", m.getMonthsRemaining());
-            System.out.printf("    Equity in home:    $%,.2f%n", m.getEquity());
+            System.out.printf("    Equity in home:    $%,.2f%n", m.getEquity(linkedProperty.getCurrentMarketValue()));
             System.out.printf("    Status:            %s%n", m.isFullyPaid() ? "PAID OFF" : "ACTIVE");
         }
         System.out.println("=============================");
@@ -557,6 +562,7 @@ public class BankSimulationApp implements CommandLineRunner {
             Property p = properties.get(i);
             System.out.printf("%n  Property %d: %s%n", i + 1, p.getAddress());
             System.out.printf("    Purchase price:    $%,.2f%n", p.getPurchasePrice());
+            System.out.printf("    Current Market Value:    $%,.2f%n", p.getCurrentMarketValue());
 
             // Show linked mortgage info
             if (p.getMortgageIndex() >= 0) {
@@ -565,7 +571,7 @@ public class BankSimulationApp implements CommandLineRunner {
                     ActiveMortgage m = mortgages.get(p.getMortgageIndex());
                     System.out.printf("    Mortgage payment:  $%,.2f/mo%n", m.getTotalMonthlyCharge());
                     System.out.printf("    Remaining balance: $%,.2f%n", m.getRemainingBalance());
-                    System.out.printf("    Equity:            $%,.2f%n", m.getEquity());
+                    System.out.printf("    Equity:            $%,.2f%n", m.getEquity(p.getCurrentMarketValue()));
                     System.out.printf("    Mortgage status:   %s%n", m.isFullyPaid() ? "PAID OFF" : "ACTIVE");
                 }
             }
@@ -583,16 +589,115 @@ public class BankSimulationApp implements CommandLineRunner {
         }
 
         System.out.println("\n===== Networth History =====");
+        System.out.println("Month\tNetworth\tChange");
         for (int i = 0; i < history.size(); i++) {
             BigDecimal value = history.get(i);
             if (i == 0) {
-                System.out.printf("  Month %3d:  $%,.2f%n", i + 1, value);
+                System.out.printf("%d\t%.2f\t%n", i + 1, value);
             } else {
                 BigDecimal change = value.subtract(history.get(i - 1));
-                String sign = change.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "";
-                System.out.printf("  Month %3d:  $%,.2f  (%s$%,.2f)%n", i + 1, value, sign, change);
+                System.out.printf("%d\t%.2f\t%.2f%n", i + 1, value, change);
             }
         }
         System.out.println("=============================");
+    }
+
+    private void sellProperty() {
+        List<Property> properties = propertyService.getProperties();
+        if (properties.isEmpty()) {
+            System.out.println("\nNo properties to sell.");
+            return;
+        }
+
+        System.out.println("\n--- Sell a Property ---");
+        System.out.println("Select a property to sell:");
+        for (int i = 0; i < properties.size(); i++) {
+            Property p = properties.get(i);
+            System.out.printf("  %d - %s (purchased: $%,.2f, current value: $%,.2f)%n",
+                i + 1, p.getAddress(), p.getPurchasePrice(), p.getCurrentMarketValue());
+        }
+        System.out.print("> ");
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
+        if (choice < 1 || choice > properties.size()) {
+            System.out.println("Invalid choice.");
+            return;
+        }
+
+        Property selectedProp = properties.get(choice - 1);
+        int mortgageIndex = selectedProp.getMortgageIndex();
+        BigDecimal salePrice = selectedProp.getCurrentMarketValue();
+
+        // --- Standard selling fees (Minnesota estimates) ---
+        // Agent commission: 5.5% (split between buyer's and seller's agents)
+        // Closing costs: 1.5% (title insurance, escrow, recording, etc.)
+        // MN state deed tax: 0.33% ($3.30 per $1,000)
+        BigDecimal agentCommissionRate = new BigDecimal("0.055");
+        BigDecimal closingCostRate = new BigDecimal("0.015");
+        BigDecimal deedTaxRate = new BigDecimal("0.0033");
+
+        BigDecimal agentCommission = salePrice.multiply(agentCommissionRate).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal closingCosts = salePrice.multiply(closingCostRate).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal deedTax = salePrice.multiply(deedTaxRate).setScale(2, java.math.RoundingMode.HALF_UP);
+        BigDecimal totalFees = agentCommission.add(closingCosts).add(deedTax);
+
+        BigDecimal salePriceAfterFees = salePrice.subtract(totalFees);
+
+        BigDecimal remainingBalance = BigDecimal.ZERO;
+        if (mortgageIndex >= 0) {
+            ActiveMortgage mortgage = mortgageService.getMortgage(mortgageIndex);
+            remainingBalance = mortgage.getRemainingBalance();
+        }
+        BigDecimal netProceeds = salePriceAfterFees.subtract(remainingBalance);
+
+        System.out.println("\n===== Sale Summary =====");
+        System.out.printf("  Property:            %s%n", selectedProp.getAddress());
+        System.out.printf("  Purchase price:      $%,.2f%n", selectedProp.getPurchasePrice());
+        System.out.printf("  Sale price:          $%,.2f%n", salePrice);
+        System.out.println("  --- Selling Fees ---");
+        System.out.printf("  Agent commission (5.5%%): $%,.2f%n", agentCommission);
+        System.out.printf("  Closing costs (1.5%%):    $%,.2f%n", closingCosts);
+        System.out.printf("  MN deed tax (0.33%%):     $%,.2f%n", deedTax);
+        System.out.printf("  Total fees:              $%,.2f%n", totalFees);
+        System.out.println("  ----------------------");
+        System.out.printf("  After fees:          $%,.2f%n", salePriceAfterFees);
+        System.out.printf("  Remaining mortgage:  $%,.2f%n", remainingBalance);
+        System.out.printf("  Net proceeds:        $%,.2f%n", netProceeds);
+        if (netProceeds.compareTo(BigDecimal.ZERO) < 0) {
+            System.out.printf("  *** You owe $%,.2f at closing (short sale) ***%n", netProceeds.negate());
+        }
+        System.out.println("========================");
+
+        System.out.print("Confirm sale? (y/n): ");
+        String confirm = scanner.nextLine().trim().toLowerCase();
+        if (!confirm.equals("y")) {
+            System.out.println("Sale cancelled.");
+            return;
+        }
+
+        try {
+            if (mortgageIndex >= 0) {
+                mortgageService.sellProperty(accountNumber, mortgageIndex, salePriceAfterFees);
+            } else {
+                bankAccountService.deposit(accountNumber, salePriceAfterFees);
+            }
+
+            if (selectedProp.isRentedOut() && selectedProp.getRentalIndex() >= 0) {
+                int rentalIdx = selectedProp.getRentalIndex();
+                rentalPropertyService.removeProperty(rentalIdx);
+                propertyService.adjustRentalIndicesAfterRemoval(rentalIdx);
+            }
+
+            propertyService.removeProperty(choice - 1);
+
+            System.out.println("\nProperty sold successfully!");
+            System.out.printf("  Net proceeds of $%,.2f applied to your account.%n", netProceeds);
+            networthService.recalculateNetworth(accountNumber);
+            printAccountInfo(0);
+        } catch (IllegalArgumentException e) {
+            System.out.println("Sale failed: " + e.getMessage());
+        }
+
     }
 }

@@ -33,6 +33,10 @@ public class MortgageService {
         return loanTypes;
     }
 
+    public ActiveMortgage getMortgage(int index) {
+        return activeMortgages.get(index);
+    }
+
     public MortgageSummary calculate(LoanType loanType, BigDecimal houseCost, BigDecimal deposit,
                                      BigDecimal annualInterestRate, int termYears) {
         BigDecimal loanAmount = houseCost.subtract(deposit);
@@ -95,4 +99,39 @@ public class MortgageService {
     public boolean hasActiveMortgages() {
         return activeMortgages.stream().anyMatch(m -> !m.isFullyPaid());
     }
+
+    /**
+     * Sell a property tied to a mortgage — pays off remaining loan balance,
+     * credits net proceeds to the bank account, and removes the property.
+     *
+     * @return net proceeds (salePrice minus remaining balance).
+     *         Negative means the seller owes money at closing.
+     */
+    public BigDecimal sellProperty(String accountNumber, int mortgageIndex, BigDecimal salePrice) {
+        if (mortgageIndex < 0 || mortgageIndex >= activeMortgages.size()) {
+            throw new IllegalArgumentException("Invalid mortgage index: " + mortgageIndex);
+        }
+
+        ActiveMortgage mortgage = activeMortgages.get(mortgageIndex);
+        BigDecimal remainingBalance = mortgage.getRemainingBalance();
+
+        BigDecimal netProceeds = salePrice.subtract(remainingBalance);
+
+        if (netProceeds.compareTo(BigDecimal.ZERO) < 0) {
+            // Seller must cover the shortfall (short sale scenario)
+            bankAccountService.charge(accountNumber, netProceeds.negate());
+        } else {
+            // Seller pockets the equity
+            bankAccountService.deposit(accountNumber, netProceeds);
+        }
+
+        // Mark mortgage as fully paid off
+        mortgage.payOff();
+
+        // Remove the associated property
+        propertyService.removePropertyByMortgageIndex(mortgageIndex);
+
+        return netProceeds;
+    }
+
 }

@@ -18,6 +18,9 @@ public class Property {
     private BigDecimal currentMarketValue;
 
     @Setter
+    private boolean rentedOut;
+
+    @Setter
     private int rentalIndex;
 
     public Property(String address, BigDecimal purchasePrice, int mortgageIndex
