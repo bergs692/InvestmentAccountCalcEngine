@@ -1,6 +1,8 @@
 com\InvestmentAccCalcEngine\domain\BankAccount.class
 com\InvestmentAccCalcEngine\domain\MortgageSummary.class
 com\InvestmentAccCalcEngine\domain\RentalProperty.class
+com\InvestmentAccCalcEngine\cli\MenuHandler.class
+com\InvestmentAccCalcEngine\cli\DisplayFormatter.class
 com\InvestmentAccCalcEngine\domain\MonthlyProjection.class
 com\InvestmentAccCalcEngine\service\BankAccountService.class
 com\InvestmentAccCalcEngine\service\MortgageService.class
