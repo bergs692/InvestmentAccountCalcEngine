@@ -37,6 +37,7 @@ public class BankSimulationApp implements CommandLineRunner {
     private final BigDecimal rentRate; // e.g. 0.008 for 8%
     private final BigDecimal salaryMeritIncreaseRate; // e.g. 0.035 for 3.5%
 
+    private final boolean simplifiedRentalMode;
 
     public BankSimulationApp(BankAccountService bankAccountService,
                              SalaryService salaryService,
@@ -57,6 +58,9 @@ public class BankSimulationApp implements CommandLineRunner {
         this.annualAppreciationRate = BigDecimal.valueOf(3.5); // e.g. 3.5 for 3.5%
         this.rentRate = BigDecimal.valueOf(0.008); // e.g. 0.008 for 8%
         this.salaryMeritIncreaseRate = BigDecimal.valueOf(0.035); // e.g. 0.035 for 3.5%
+
+        this.simplifiedRentalMode = true; // toggle to false for full simulation
+        rentalPropertyService.setSimplifiedMode(this.simplifiedRentalMode);
     }
 
     @Override
@@ -103,6 +107,9 @@ public class BankSimulationApp implements CommandLineRunner {
 
             // Apply Monthly Property Appreciation
             propertyService.applyMonthlyAppreciation(annualAppreciationRate);
+            // Apply monthly salary
+            bankAccountService.deposit(accountNumber, monthlyTakeHome);
+            System.out.printf("  Salary deposited:          +$%,.2f%n", monthlyTakeHome);
 
             // Apply Yearly Changes
             if (month % 12 == 0){
@@ -138,6 +145,7 @@ public class BankSimulationApp implements CommandLineRunner {
                     System.out.printf("  Rental expenses (net):     -$%,.2f%n", rentalNet.negate());
                 }
             }
+
 
 
 
@@ -207,6 +215,7 @@ public class BankSimulationApp implements CommandLineRunner {
                             System.out.println("Exiting simulation. Goodbye!");
                             return;
                         }
+                        case "sr" -> toggleSimplifiedRental();
                         default -> System.out.println("Unknown command, try again.");
                     }
 
@@ -241,6 +250,7 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("  10 - Sell a property");
         System.out.println("  q - Quit");
         System.out.println("  nh - View Networth History");
+        System.out.println("  sr - Toggle simplified rental mode");
     }
 
     private void takeOutMortgage() {
@@ -474,26 +484,37 @@ public class BankSimulationApp implements CommandLineRunner {
         System.out.println("\n===== Rental Property Added =====");
         System.out.printf("  Address:              %s%n", address);
         System.out.printf("  Property value:       $%,.2f%n", propertyValue);
-        System.out.printf("  Monthly rent:         $%,.2f%n", monthlyRent);
-        System.out.printf("  Vacancy rate:         %.1f%%%n", vacancyPct);
-        System.out.printf("  Gross yield:          %s%%%n", rental.getGrossYield());
-        System.out.println("  --- Monthly Expenses ---");
-        System.out.printf("  Tax + insurance:      $%,.2f%n", taxInsurance);
-        System.out.printf("  Maintenance reserve:  $%,.2f%n", maintenance);
-        System.out.printf("  Property management:  $%,.2f (%.0f%% of rent)%n", mgmtFeeEst, mgmtPct);
-        System.out.printf("  Utilities (landlord): $%,.2f%n", utilities);
-        System.out.printf("  Lawn/snow:            $%,.2f%n", lawnSnow);
-        System.out.printf("  Internet:             $%,.2f%n", internet);
-        System.out.printf("  Electric:             $%,.2f%n", electric);
-        System.out.printf("  CapEx reserve:        $%,.2f%n", capex);
-        System.out.printf("  Other misc:           $%,.2f%n", misc);
-        System.out.println("  ---------------------------");
-        System.out.printf("  Total expenses:       $%,.2f%n", estExpenses);
-        System.out.printf("  Est. net cash flow:   $%,.2f/mo (before mortgage)%n", estCashFlow);
-        if (mortgageIndex >= 0) {
-            ActiveMortgage linked = mortgageService.getActiveMortgages().get(mortgageIndex);
-            BigDecimal afterMortgage = estCashFlow.subtract(linked.getTotalMonthlyCharge());
-            System.out.printf("  After mortgage:       $%,.2f/mo%n", afterMortgage);
+
+        if (rentalPropertyService.isSimplifiedMode()) {
+            BigDecimal guaranteedNet = propertyValue.multiply(new BigDecimal("0.001")).setScale(2, java.math.RoundingMode.HALF_UP);
+            System.out.println("  Mode:                 SIMPLIFIED");
+            System.out.printf("  Guaranteed net income: $%,.2f/mo ($100 per $100k)%n", guaranteedNet);
+            if (mortgageIndex >= 0) {
+                ActiveMortgage linked = mortgageService.getActiveMortgages().get(mortgageIndex);
+                System.out.printf("  Mortgage payment:     $%,.2f/mo (covered by simplified mode)%n", linked.getTotalMonthlyCharge());
+            }
+        } else {
+            System.out.printf("  Monthly rent:         $%,.2f%n", monthlyRent);
+            System.out.printf("  Vacancy rate:         %.1f%%%n", vacancyPct);
+            System.out.printf("  Gross yield:          %s%%%n", rental.getGrossYield());
+            System.out.println("  --- Monthly Expenses ---");
+            System.out.printf("  Tax + insurance:      $%,.2f%n", taxInsurance);
+            System.out.printf("  Maintenance reserve:  $%,.2f%n", maintenance);
+            System.out.printf("  Property management:  $%,.2f (%.0f%% of rent)%n", mgmtFeeEst, mgmtPct);
+            System.out.printf("  Utilities (landlord): $%,.2f%n", utilities);
+            System.out.printf("  Lawn/snow:            $%,.2f%n", lawnSnow);
+            System.out.printf("  Internet:             $%,.2f%n", internet);
+            System.out.printf("  Electric:             $%,.2f%n", electric);
+            System.out.printf("  CapEx reserve:        $%,.2f%n", capex);
+            System.out.printf("  Other misc:           $%,.2f%n", misc);
+            System.out.println("  ---------------------------");
+            System.out.printf("  Total expenses:       $%,.2f%n", estExpenses);
+            System.out.printf("  Est. net cash flow:   $%,.2f/mo (before mortgage)%n", estCashFlow);
+            if (mortgageIndex >= 0) {
+                ActiveMortgage linked = mortgageService.getActiveMortgages().get(mortgageIndex);
+                BigDecimal afterMortgage = estCashFlow.subtract(linked.getTotalMonthlyCharge());
+                System.out.printf("  After mortgage:       $%,.2f/mo%n", afterMortgage);
+            }
         }
         System.out.println("=================================");
     }
@@ -699,5 +720,16 @@ public class BankSimulationApp implements CommandLineRunner {
             System.out.println("Sale failed: " + e.getMessage());
         }
 
+    }
+
+    private void toggleSimplifiedRental() {
+        boolean current = rentalPropertyService.isSimplifiedMode();
+        rentalPropertyService.setSimplifiedMode(!current);
+        System.out.println("\nSimplified rental mode: " + (!current ? "ON" : "OFF"));
+        if (!current) {
+            System.out.println("  Rental income = $100/mo per $100k of property value (after all expenses/mortgage).");
+        } else {
+            System.out.println("  Full expense/vacancy simulation restored.");
+        }
     }
 }

@@ -195,6 +195,16 @@ public class RentalProperty {
                 .setScale(1, RoundingMode.HALF_UP);
     }
 
+    public void incrementMonthsOwned() {
+        this.monthsOwned++;
+    }
+
+    public void addToTotalRentCollected(BigDecimal amount) {
+        this.totalRentCollected = this.totalRentCollected.add(amount);
+    }
+
+
+
     /**
      * Result of processing one month.
      */
