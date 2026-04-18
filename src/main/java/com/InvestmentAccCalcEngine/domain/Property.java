@@ -33,6 +33,17 @@ public class Property {
         this.currentMarketValue = purchasePrice;
     }
 
+    /** Deep copy constructor for simulation state isolation. */
+    public Property(Property other) {
+        this.address = other.address;
+        this.purchasePrice = other.purchasePrice;
+        this.mortgageIndex = other.mortgageIndex;
+        this.isRental = other.isRental;
+        this.currentMarketValue = other.currentMarketValue;
+        this.rentedOut = other.rentedOut;
+        this.rentalIndex = other.rentalIndex;
+    }
+
     public void applyMonthlyAppreciation(BigDecimal annualAppreciationRate) {
         BigDecimal monthlyRate = annualAppreciationRate
             .divide(BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);

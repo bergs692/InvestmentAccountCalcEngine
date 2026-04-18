@@ -1,26 +1,24 @@
 package com.InvestmentAccCalcEngine.service;
 
 import com.InvestmentAccCalcEngine.domain.Property;
+import com.InvestmentAccCalcEngine.simulator.Resettable;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.math.BigDecimal;
-import com.InvestmentAccCalcEngine.service.SalaryService;
-import com.InvestmentAccCalcEngine.service.BankAccountService;
-import com.InvestmentAccCalcEngine.service.MortgageService;
-import com.InvestmentAccCalcEngine.service.RentalPropertyService;
 import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
-import com.InvestmentAccCalcEngine.domain.MonthlyProjection;
 
 @Service
-public class NetworthService {
+public class NetworthService implements Resettable {
 
     private final BankAccountService bankAccountService;
     private final MortgageService mortgageService;
     private final PropertyService propertyService;
     @Getter
-    private final ArrayList<BigDecimal> networthHistory = new ArrayList<BigDecimal>();
+    private ArrayList<BigDecimal> networthHistory = new ArrayList<BigDecimal>();
     @Getter
     private BigDecimal prevNetworth = BigDecimal.ZERO;
 
@@ -45,10 +43,6 @@ public class NetworthService {
         return prevNetworth;
     }
 
-    /**
-     * Recalculate and update prevNetworth without adding a history entry.
-     * Use after mid-month events like selling a property.
-     */
     public BigDecimal recalculateNetworth(String accountNumber) {
         BigDecimal networth = bankAccountService.getBalance(accountNumber);
 
@@ -66,4 +60,21 @@ public class NetworthService {
         networthHistory.add(calculateNetworth(accountNumber));
     }
 
+    // ── Resettable ──
+
+    @Override
+    public Object snapshot() {
+        Map<String, Object> snap = new HashMap<>();
+        snap.put("history", new ArrayList<>(networthHistory));
+        snap.put("prevNetworth", prevNetworth);
+        return snap;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void restore(Object state) {
+        Map<String, Object> snap = (Map<String, Object>) state;
+        networthHistory = (ArrayList<BigDecimal>) snap.get("history");
+        prevNetworth = (BigDecimal) snap.get("prevNetworth");
+    }
 }

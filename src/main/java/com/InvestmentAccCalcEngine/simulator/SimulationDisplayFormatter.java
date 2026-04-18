@@ -11,10 +11,10 @@ import java.util.Map;
 @Component
 public class SimulationDisplayFormatter {
 
-    public void printStrategyMenu(Map<String, Strategy> strategies) {
+    public void printStrategyMenu(Map<String, String> strategyNames) {
         System.out.println("\n===== Available Strategies =====");
-        strategies.forEach((key, strategy) ->
-                System.out.printf("  %s - %s%n", key, strategy.getName()));
+        strategyNames.forEach((key, name) ->
+                System.out.printf("  %s - %s%n", key, name));
         System.out.println("================================");
     }
 

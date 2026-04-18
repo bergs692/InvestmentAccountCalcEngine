@@ -13,16 +13,6 @@ import java.util.Scanner;
 /**
  * Handles the "s" menu command in the CLI.
  * Lets the user pick a strategy, configure the run, and view results.
- *
- * Wire this into BankSimulationApp's switch statement:
- * <pre>
- *   case "s" -> simulationMenuHandler.handleSimulate(accountNumber, annualSalary);
- * </pre>
- *
- * And add to the menu print:
- * <pre>
- *   System.out.println("  s - Run a simulation strategy");
- * </pre>
  */
 @Component
 public class SimulationMenuHandler {
@@ -43,12 +33,12 @@ public class SimulationMenuHandler {
         this.display = display;
         this.scanner = new Scanner(System.in);
 
-        // Register built-in strategies
-        registry.register("1", new SaveAndWaitStrategy());
-        registry.register("2", new BuyAndHoldStrategy());
-        registry.register("3", new BuyAndHoldStrategy(
+        // Register strategy factories — each call creates a fresh instance
+        registry.register("1", SaveAndWaitStrategy::new);
+        registry.register("2", BuyAndHoldStrategy::new);
+        registry.register("3", () -> new BuyAndHoldStrategy(
                 BigDecimal.valueOf(300000), 2, BigDecimal.valueOf(6.5), 30));
-        registry.register("4", new BuyAndHoldStrategy(
+        registry.register("4", () -> new BuyAndHoldStrategy(
                 BigDecimal.valueOf(150000), 5, BigDecimal.valueOf(7.0), 30));
     }
 
@@ -63,7 +53,7 @@ public class SimulationMenuHandler {
             return;
         }
 
-        display.printStrategyMenu(registry.getAll());
+        display.printStrategyMenu(registry.getDisplayNames());
 
         System.out.println("  c - Compare all strategies");
         System.out.println("  v - View previous results");
@@ -83,7 +73,8 @@ public class SimulationMenuHandler {
             return;
         }
 
-        Strategy selected = registry.get(choice);
+        // Create a fresh strategy instance for this run
+        Strategy selected = registry.create(choice);
         if (selected == null) {
             System.out.println("Invalid choice.");
             return;
@@ -128,11 +119,14 @@ public class SimulationMenuHandler {
             return;
         }
 
+        // Create fresh instances for every strategy in the comparison
+        Map<String, Strategy> freshStrategies = registry.createAll();
+
         System.out.printf("Running %d strategies for %d months each...%n",
-                registry.getAll().size(), months);
+                freshStrategies.size(), months);
 
         List<SimulationResult> comparisonResults = new ArrayList<>();
-        for (Map.Entry<String, Strategy> entry : registry.getAll().entrySet()) {
+        for (Map.Entry<String, Strategy> entry : freshStrategies.entrySet()) {
             System.out.printf("  Running: %s...%n", entry.getValue().getName());
             SimulationResult result = runner.run(entry.getValue(), months, accountNumber, annualSalary);
             comparisonResults.add(result);
@@ -141,7 +135,6 @@ public class SimulationMenuHandler {
         display.printComparisonTable(comparisonResults);
         previousResults.addAll(comparisonResults);
 
-        // Also print each one individually
         System.out.print("\nShow detailed results for each? (y/n): ");
         String showDetail = scanner.nextLine().trim().toLowerCase();
         if (showDetail.equals("y")) {

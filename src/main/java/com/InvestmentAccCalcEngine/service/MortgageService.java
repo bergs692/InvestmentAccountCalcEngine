@@ -2,8 +2,8 @@ package com.InvestmentAccCalcEngine.service;
 
 import com.InvestmentAccCalcEngine.domain.ActiveMortgage;
 import com.InvestmentAccCalcEngine.domain.MortgageSummary;
-import com.InvestmentAccCalcEngine.domain.Property;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
+import com.InvestmentAccCalcEngine.simulator.Resettable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -11,14 +11,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
-public class MortgageService {
+public class MortgageService implements Resettable {
 
     private final Map<String, LoanType> loanTypes = new LinkedHashMap<>();
     private final BankAccountService bankAccountService;
     private final PropertyService propertyService;
-    private final List<ActiveMortgage> activeMortgages = new ArrayList<>();
+    private List<ActiveMortgage> activeMortgages = new ArrayList<>();
 
     public MortgageService(List<LoanType> loanTypeList, BankAccountService bankAccountService,
                            PropertyService propertyService) {
@@ -53,9 +54,6 @@ public class MortgageService {
         );
     }
 
-    /**
-     * Take out a mortgage — deducts deposit, registers mortgage, creates Property.
-     */
     public ActiveMortgage takeOutMortgage(String accountNumber, LoanType loanType,
                                           BigDecimal houseCost, BigDecimal deposit,
                                           BigDecimal annualInterestRate, int termYears,
@@ -74,7 +72,6 @@ public class MortgageService {
         activeMortgages.add(mortgage);
         int mortgageIndex = activeMortgages.size() - 1;
 
-        // Auto-create a Property record for this purchase
         propertyService.addProperty(propertyAddress, houseCost, mortgageIndex);
 
         return mortgage;
@@ -100,13 +97,6 @@ public class MortgageService {
         return activeMortgages.stream().anyMatch(m -> !m.isFullyPaid());
     }
 
-    /**
-     * Sell a property tied to a mortgage — pays off remaining loan balance,
-     * credits net proceeds to the bank account, and removes the property.
-     *
-     * @return net proceeds (salePrice minus remaining balance).
-     *         Negative means the seller owes money at closing.
-     */
     public BigDecimal sellProperty(String accountNumber, int mortgageIndex, BigDecimal salePrice) {
         if (mortgageIndex < 0 || mortgageIndex >= activeMortgages.size()) {
             throw new IllegalArgumentException("Invalid mortgage index: " + mortgageIndex);
@@ -118,20 +108,29 @@ public class MortgageService {
         BigDecimal netProceeds = salePrice.subtract(remainingBalance);
 
         if (netProceeds.compareTo(BigDecimal.ZERO) < 0) {
-            // Seller must cover the shortfall (short sale scenario)
             bankAccountService.charge(accountNumber, netProceeds.negate());
         } else {
-            // Seller pockets the equity
             bankAccountService.deposit(accountNumber, netProceeds);
         }
 
-        // Mark mortgage as fully paid off
         mortgage.payOff();
-
-        // Remove the associated property
         propertyService.removePropertyByMortgageIndex(mortgageIndex);
 
         return netProceeds;
     }
 
+    // ── Resettable ──
+
+    @Override
+    public Object snapshot() {
+        return activeMortgages.stream()
+                .map(ActiveMortgage::new)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void restore(Object state) {
+        activeMortgages = (List<ActiveMortgage>) state;
+    }
 }

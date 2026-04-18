@@ -7,21 +7,6 @@ import java.math.RoundingMode;
 /**
  * Represents an active rental property investment.
  * Tracks all income and expenses from the landlord's perspective.
- *
- * Monthly cash flow =
- *   + Rent (when occupied)
- *   - Vacancy loss (estimated % of rent, applied as reduced rent months)
- *   - Property tax & insurance
- *   - Maintenance reserve
- *   - Property management fee (% of rent)
- *   - Utilities (landlord portion)
- *   - Lawn care / snow removal
- *   - Internet (if landlord-provided)
- *   - Electric (landlord portion)
- *   - CapEx / repair reserve
- *   - Other misc expenses
- *
- * Mortgage is tracked separately via ActiveMortgage and linked by mortgageIndex.
  */
 @Setter
 @Getter
@@ -30,21 +15,18 @@ public class RentalProperty {
     private BigDecimal propertyValue;
     private BigDecimal monthlyRent;
 
-    // Expense fields (monthly amounts, stored as positive values)
-    private final BigDecimal vacancyRate;           // e.g. 0.05 = 5% vacancy
-    private BigDecimal taxAndInsurance;        // monthly property tax + homeowner's insurance
-    private BigDecimal maintenanceReserve;     // monthly maintenance set-aside
-    private final BigDecimal propertyManagementRate; // e.g. 0.10 = 10% of rent
-    private final BigDecimal utilitiesLandlord;      // landlord-paid utilities (not tenant-offset)
-    private final BigDecimal lawnCareSnow;           // lawn care / snow removal (MN winters!)
-    private final BigDecimal internet;               // if landlord provides internet
-    private final BigDecimal electric;               // landlord-paid electric
-    private BigDecimal capExReserve;           // capital expenditure / major repair reserve
-    private BigDecimal otherMiscExpenses;      // catch-all for other costs
+    private final BigDecimal vacancyRate;
+    private BigDecimal taxAndInsurance;
+    private BigDecimal maintenanceReserve;
+    private final BigDecimal propertyManagementRate;
+    private final BigDecimal utilitiesLandlord;
+    private final BigDecimal lawnCareSnow;
+    private final BigDecimal internet;
+    private final BigDecimal electric;
+    private BigDecimal capExReserve;
+    private BigDecimal otherMiscExpenses;
 
-    // Linked mortgage (index into MortgageService's activeMortgages list, -1 if none)
     private final int mortgageIndex;
-
     private final Property property;
 
     // Running totals
@@ -85,14 +67,35 @@ public class RentalProperty {
     }
 
     /**
-     * Simulate one month. Determines if occupied (based on vacancy rate probability),
-     * calculates rent income and all expenses, returns net cash flow for the month.
-     * Net cash flow does NOT include mortgage — that's handled separately.
+     * Deep copy constructor for simulation state isolation.
+     * Note: takes a pre-copied Property to maintain correct references.
      */
+    public RentalProperty(RentalProperty other, Property copiedProperty) {
+        this.address = other.address;
+        this.propertyValue = other.propertyValue;
+        this.monthlyRent = other.monthlyRent;
+        this.vacancyRate = other.vacancyRate;
+        this.taxAndInsurance = other.taxAndInsurance;
+        this.maintenanceReserve = other.maintenanceReserve;
+        this.propertyManagementRate = other.propertyManagementRate;
+        this.utilitiesLandlord = other.utilitiesLandlord;
+        this.lawnCareSnow = other.lawnCareSnow;
+        this.internet = other.internet;
+        this.electric = other.electric;
+        this.capExReserve = other.capExReserve;
+        this.otherMiscExpenses = other.otherMiscExpenses;
+        this.mortgageIndex = other.mortgageIndex;
+        this.property = copiedProperty; // use the already-copied Property
+        this.totalRentCollected = other.totalRentCollected;
+        this.totalExpensesPaid = other.totalExpensesPaid;
+        this.totalVacancyLoss = other.totalVacancyLoss;
+        this.monthsOwned = other.monthsOwned;
+        this.vacantMonths = other.vacantMonths;
+    }
+
     public MonthlyRentalResult processMonth() {
         monthsOwned++;
 
-        // Simple vacancy model: if random < vacancyRate, this month is vacant
         boolean occupied = Math.random() >= vacancyRate.doubleValue();
 
         BigDecimal rentThisMonth;
@@ -105,10 +108,8 @@ public class RentalProperty {
         }
         totalRentCollected = totalRentCollected.add(rentThisMonth);
 
-        // Property management is % of rent collected (only when occupied)
         BigDecimal mgmtFee = rentThisMonth.multiply(propertyManagementRate).setScale(2, RoundingMode.HALF_UP);
 
-        // Total landlord expenses this month (all fixed + management fee)
         BigDecimal totalExpenses = taxAndInsurance
                 .add(maintenanceReserve)
                 .add(mgmtFee)
@@ -126,16 +127,6 @@ public class RentalProperty {
         return new MonthlyRentalResult(occupied, rentThisMonth, totalExpenses, mgmtFee, netCashFlow);
     }
 
-    /**
-     * Recalculate expenses that are derived from property value.
-     * Call yearly after property appreciation is applied.
-     *
-     * Uses the same rates from initial setup:
-     *   - Tax + insurance: 2% of value / 12
-     *   - Maintenance:     1.5% of value / 12
-     *   - CapEx reserve:   1.5% of value / 12
-     *   - Other misc:      3.3% of monthly rent
-     */
     public void recalculateExpensesFromValue(BigDecimal currentValue, BigDecimal currentRent) {
         this.taxAndInsurance = currentValue.multiply(new BigDecimal("0.02"))
             .divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
@@ -147,11 +138,6 @@ public class RentalProperty {
             .setScale(2, RoundingMode.HALF_UP);
     }
 
-
-
-    /**
-     * Total landlord expenses per month (assuming occupied, for display/projection).
-     */
     public BigDecimal getEstimatedMonthlyExpenses() {
         BigDecimal mgmtFee = monthlyRent.multiply(propertyManagementRate).setScale(2, RoundingMode.HALF_UP);
         return taxAndInsurance
@@ -165,16 +151,10 @@ public class RentalProperty {
                 .add(otherMiscExpenses);
     }
 
-    /**
-     * Net monthly cash flow estimate (rent - expenses, not including mortgage).
-     */
     public BigDecimal getEstimatedMonthlyCashFlow() {
         return monthlyRent.subtract(getEstimatedMonthlyExpenses());
     }
 
-    /**
-     * Gross yield = (annual rent / property value) * 100
-     */
     public BigDecimal getGrossYield() {
         if (propertyValue.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
         return monthlyRent.multiply(BigDecimal.valueOf(12))
@@ -183,9 +163,6 @@ public class RentalProperty {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    /**
-     * Actual occupancy rate so far.
-     */
     public BigDecimal getOccupancyRate() {
         if (monthsOwned == 0) return BigDecimal.valueOf(100);
         int occupiedMonths = monthsOwned - vacantMonths;
@@ -203,11 +180,6 @@ public class RentalProperty {
         this.totalRentCollected = this.totalRentCollected.add(amount);
     }
 
-
-
-    /**
-     * Result of processing one month.
-     */
     @Getter
     @AllArgsConstructor
     public static class MonthlyRentalResult {

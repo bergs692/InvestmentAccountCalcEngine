@@ -1,15 +1,17 @@
 package com.InvestmentAccCalcEngine.service;
 
 import com.InvestmentAccCalcEngine.domain.BankAccount;
+import com.InvestmentAccCalcEngine.simulator.Resettable;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-public class BankAccountService {
+public class BankAccountService implements Resettable {
 
-    private final List<BankAccount> accounts = new ArrayList<>();
+    private List<BankAccount> accounts = new ArrayList<>();
 
     public void deposit(String accountNumber, BigDecimal amount) {
         BankAccount account = findByAccountNumber(accountNumber);
@@ -41,5 +43,20 @@ public class BankAccountService {
                 .filter(a -> a.getAccountNumber().equals(accountNumber))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+    }
+
+    // ── Resettable ──
+
+    @Override
+    public Object snapshot() {
+        return accounts.stream()
+                .map(BankAccount::new)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void restore(Object state) {
+        accounts = (List<BankAccount>) state;
     }
 }

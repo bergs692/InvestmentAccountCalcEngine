@@ -70,7 +70,7 @@ public class SimulationRunner {
 
         try {
             return runIsolated(strategy, months, accountNumber, annualSalary,
-                appreciationRate, rentRate, meritRate);
+                    appreciationRate, rentRate, meritRate);
         } finally {
             // ── Always restore, even if the strategy throws ──
             stateManager.restoreAll();
@@ -86,10 +86,10 @@ public class SimulationRunner {
                                          BigDecimal meritRate) {
 
         SimulationContext ctx = new SimulationContext(
-            bankAccountService, salaryService, projectionService,
-            mortgageService, propertyService, rentalPropertyService,
-            networthService, accountNumber, annualSalary,
-            appreciationRate, rentRate, meritRate
+                bankAccountService, salaryService, projectionService,
+                mortgageService, propertyService, rentalPropertyService,
+                networthService, accountNumber, annualSalary,
+                appreciationRate, rentRate, meritRate
         );
 
         BigDecimal startingBalance = ctx.getBalance();
@@ -117,15 +117,15 @@ public class SimulationRunner {
             }
 
             snapshots.add(new SimulationResult.MonthSnapshot(
-                m,
-                ctx.getBalance(),
-                ctx.getNetworth(),
-                ctx.getOwnedProperties().size()
+                    m,
+                    ctx.getBalance(),
+                    ctx.getNetworth(),
+                    ctx.getOwnedProperties().size()
             ));
 
             if (m % 12 == 0) {
                 eventLog.add(String.format("Month %d (Year %d): Balance=$%,.2f  Networth=$%,.2f  Properties=%d",
-                    m, m / 12, ctx.getBalance(), ctx.getNetworth(), ctx.getOwnedProperties().size()));
+                        m, m / 12, ctx.getBalance(), ctx.getNetworth(), ctx.getOwnedProperties().size()));
             }
         }
 
@@ -137,17 +137,17 @@ public class SimulationRunner {
         }
 
         return new SimulationResult(
-            strategy.getName(),
-            months,
-            startingBalance,
-            ctx.getBalance(),
-            startingNetworth,
-            ctx.getNetworth(),
-            ctx.getOwnedProperties().size(),
-            ctx.getRentalProperties().size(),
-            ctx.getActiveMortgages().size(),
-            snapshots,
-            eventLog
+                strategy.getName(),
+                months,
+                startingBalance,
+                ctx.getBalance(),
+                startingNetworth,
+                ctx.getNetworth(),
+                ctx.getOwnedProperties().size(),
+                ctx.getRentalProperties().size(),
+                ctx.getActiveMortgages().size(),
+                snapshots,
+                eventLog
         );
     }
 
@@ -156,8 +156,8 @@ public class SimulationRunner {
      */
     public SimulationResult run(Strategy strategy, int months, String accountNumber, BigDecimal annualSalary) {
         return run(strategy, months, accountNumber, annualSalary,
-            BigDecimal.valueOf(3.5),
-            BigDecimal.valueOf(0.008),
-            BigDecimal.valueOf(0.035));
+                BigDecimal.valueOf(3.5),
+                BigDecimal.valueOf(0.008),
+                BigDecimal.valueOf(0.035));
     }
 }

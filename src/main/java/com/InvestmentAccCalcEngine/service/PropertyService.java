@@ -1,18 +1,20 @@
 package com.InvestmentAccCalcEngine.service;
 
 import com.InvestmentAccCalcEngine.domain.Property;
+import com.InvestmentAccCalcEngine.simulator.Resettable;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Service
-public class PropertyService {
+public class PropertyService implements Resettable {
 
-    private final List<Property> properties = new ArrayList<>();
+    private List<Property> properties = new ArrayList<>();
 
     public Property addProperty(String address, BigDecimal purchasePrice, int mortgageIndex) {
         Property property = new Property(address, purchasePrice, mortgageIndex);
@@ -54,12 +56,9 @@ public class PropertyService {
         }
         properties.remove(index);
 
-        // Update mortgageIndex references for properties that shifted down
         for (int i = index; i < properties.size(); i++) {
-            // Rental indices that pointed beyond the removed entry need updating too
             Property p = properties.get(i);
             if (p.getRentalIndex() >= 0) {
-                // Rental index stays the same — it's managed separately
             }
         }
     }
@@ -77,5 +76,20 @@ public class PropertyService {
                 p.setRentedOut(false);
             }
         }
+    }
+
+    // ── Resettable ──
+
+    @Override
+    public Object snapshot() {
+        return properties.stream()
+                .map(Property::new)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void restore(Object state) {
+        properties = (List<Property>) state;
     }
 }

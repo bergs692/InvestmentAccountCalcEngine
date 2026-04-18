@@ -4,43 +4,69 @@ import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Registry of available simulation strategies.
- * Add new strategies here — they'll automatically appear in the CLI menu.
+ *
+ * Stores strategy factories (Suppliers) rather than instances,
+ * so each simulation run gets a fresh strategy with clean internal state.
+ * This prevents bugs like a "propertiesBought" counter carrying over
+ * between runs.
  */
 @Component
 public class StrategyRegistry {
 
-    private final Map<String, Strategy> strategies = new LinkedHashMap<>();
+    private final Map<String, Supplier<Strategy>> factories = new LinkedHashMap<>();
 
     public StrategyRegistry() {
-        // Register all strategies here
-        // Key is what the user types, value is the strategy instance
     }
 
     /**
-     * Register a strategy programmatically.
+     * Register a strategy factory. The supplier is called each time
+     * the strategy is selected for a run, producing a fresh instance.
+     *
+     * Usage:
+     *   registry.register("1", () -> new BuyAndHoldStrategy());
+     *   registry.register("2", () -> new BuyAndHoldStrategy(300000, 2, 6.5, 30));
      */
-    public void register(String key, Strategy strategy) {
-        strategies.put(key, strategy);
+    public void register(String key, Supplier<Strategy> factory) {
+        factories.put(key, factory);
     }
 
     /**
-     * Get all registered strategies.
+     * Create a fresh strategy instance for the given key.
+     * Returns null if the key is not registered.
      */
-    public Map<String, Strategy> getAll() {
-        return strategies;
+    public Strategy create(String key) {
+        Supplier<Strategy> factory = factories.get(key);
+        return factory != null ? factory.get() : null;
     }
 
     /**
-     * Look up a strategy by its key.
+     * Create fresh instances of all registered strategies.
+     * Used by the comparison runner to get clean copies for each run.
      */
-    public Strategy get(String key) {
-        return strategies.get(key);
+    public Map<String, Strategy> createAll() {
+        Map<String, Strategy> instances = new LinkedHashMap<>();
+        factories.forEach((key, factory) -> instances.put(key, factory.get()));
+        return instances;
+    }
+
+    /**
+     * Get strategy names for display (creates temporary instances just for getName()).
+     */
+    public Map<String, String> getDisplayNames() {
+        Map<String, String> names = new LinkedHashMap<>();
+        factories.forEach((key, factory) -> names.put(key, factory.get().getName()));
+        return names;
     }
 
     public boolean isEmpty() {
-        return strategies.isEmpty();
+        return factories.isEmpty();
+    }
+
+    public int size() {
+        return factories.size();
     }
 }
