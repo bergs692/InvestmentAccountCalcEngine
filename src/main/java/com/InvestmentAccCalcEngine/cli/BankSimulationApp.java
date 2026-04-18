@@ -1,6 +1,7 @@
 package com.InvestmentAccCalcEngine.cli;
 
 import com.InvestmentAccCalcEngine.service.*;
+import com.InvestmentAccCalcEngine.simulator.SimulationMenuHandler;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,9 @@ public class BankSimulationApp implements CommandLineRunner {
     private final BigDecimal rentRate;
     private final BigDecimal salaryMeritIncreaseRate;
 
+    private final SimulationMenuHandler simulationMenuHandler;
+    // add to constructor params + assignment
+
     public BankSimulationApp(BankAccountService bankAccountService,
                              SalaryService salaryService,
                              ProjectionService projectionService,
@@ -38,7 +42,8 @@ public class BankSimulationApp implements CommandLineRunner {
                              RentalPropertyService rentalPropertyService,
                              NetworthService networthService,
                              MenuHandler menuHandler,
-                             DisplayFormatter display) {
+                             DisplayFormatter display,
+                             SimulationMenuHandler simulationMenuHandler) {
         this.bankAccountService = bankAccountService;
         this.salaryService = salaryService;
         this.mortgageService = mortgageService;
@@ -47,6 +52,7 @@ public class BankSimulationApp implements CommandLineRunner {
         this.networthService = networthService;
         this.menuHandler = menuHandler;
         this.display = display;
+        this.simulationMenuHandler = simulationMenuHandler;
 
         this.annualAppreciationRate = BigDecimal.valueOf(3.5);
         this.rentRate = BigDecimal.valueOf(0.008);
@@ -141,6 +147,7 @@ public class BankSimulationApp implements CommandLineRunner {
                             System.out.println("Exiting simulation. Goodbye!");
                             return;
                         }
+                        case "s" -> simulationMenuHandler.handleSimulate(accountNumber, annualSalary);
                         default   -> System.out.println("Unknown command, try again.");
                     }
 

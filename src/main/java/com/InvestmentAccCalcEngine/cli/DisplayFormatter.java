@@ -405,5 +405,6 @@ public class DisplayFormatter {
     System.out.println("  q - Quit");
     System.out.println("  nh - View Networth History");
     System.out.println("  sr - Toggle simplified rental mode");
+    System.out.println("  s - Run a simulation strategy");
   }
 }
