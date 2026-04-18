@@ -1,4 +1,5 @@
 com\InvestmentAccCalcEngine\domain\MortgageSummary.class
+com\InvestmentAccCalcEngine\viewer\ChartViewer$1.class
 com\InvestmentAccCalcEngine\cli\DisplayFormatter.class
 com\InvestmentAccCalcEngine\service\BankAccountService.class
 com\InvestmentAccCalcEngine\service\NetworthService.class
@@ -8,12 +9,14 @@ com\InvestmentAccCalcEngine\simulator\SimulationDisplayFormatter.class
 com\InvestmentAccCalcEngine\simulator\SimulationResult$MonthSnapshot.class
 com\InvestmentAccCalcEngine\service\RentalPropertyService.class
 com\InvestmentAccCalcEngine\service\SalaryService.class
+com\InvestmentAccCalcEngine\viewer\ChartViewer$Metric.class
 com\InvestmentAccCalcEngine\simulator\SimulationContext.class
 com\InvestmentAccCalcEngine\simulator\Resettable.class
 com\InvestmentAccCalcEngine\simulator\SimulationMenuHandler.class
 com\InvestmentAccCalcEngine\service\PropertyService.class
 com\InvestmentAccCalcEngine\service\loan\LoanType.class
 com\InvestmentAccCalcEngine\service\ProjectionService.class
+com\InvestmentAccCalcEngine\viewer\ChartViewer.class
 com\InvestmentAccCalcEngine\MyAppApplication.class
 com\InvestmentAccCalcEngine\service\loan\StandardLoan.class
 com\InvestmentAccCalcEngine\simulator\strategies\BuyAndHoldStrategy.class

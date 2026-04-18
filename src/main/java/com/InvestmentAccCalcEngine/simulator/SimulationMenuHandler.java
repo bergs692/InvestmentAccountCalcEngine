@@ -2,6 +2,7 @@ package com.InvestmentAccCalcEngine.simulator;
 
 import com.InvestmentAccCalcEngine.simulator.strategies.BuyAndHoldStrategy;
 import com.InvestmentAccCalcEngine.simulator.strategies.SaveAndWaitStrategy;
+import com.InvestmentAccCalcEngine.viewer.ChartViewer;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ public class SimulationMenuHandler {
     private final SimulationRunner runner;
     private final StrategyRegistry registry;
     private final SimulationDisplayFormatter display;
+    private final ChartViewer chartViewer;
     private final Scanner scanner;
 
     // Store results for comparison
@@ -27,10 +29,12 @@ public class SimulationMenuHandler {
 
     public SimulationMenuHandler(SimulationRunner runner,
                                  StrategyRegistry registry,
-                                 SimulationDisplayFormatter display) {
+                                 SimulationDisplayFormatter display,
+                                 ChartViewer chartViewer) {
         this.runner = runner;
         this.registry = registry;
         this.display = display;
+        this.chartViewer = chartViewer;
         this.scanner = new Scanner(System.in);
 
         // Register strategy factories — each call creates a fresh instance
@@ -105,6 +109,8 @@ public class SimulationMenuHandler {
 
         previousResults.add(result);
         System.out.printf("  Result saved (%d total). Use 'c' to compare.%n", previousResults.size());
+
+        promptForChart(result);
     }
 
     private void runComparison(String accountNumber, BigDecimal annualSalary) {
@@ -142,6 +148,8 @@ public class SimulationMenuHandler {
                 display.printSimulationResult(r);
             }
         }
+
+        promptForComparisonChart(comparisonResults);
     }
 
     private void viewPreviousResults() {
@@ -158,26 +166,79 @@ public class SimulationMenuHandler {
                     r.getEndingNetworth(), r.getNetworthGain());
         }
 
-        System.out.print("View details for which? (number, 'all', or 'compare'): ");
+        System.out.print("View details for which? (number, 'all', 'compare', or 'chart <n>' / 'chart all'): ");
         String input = scanner.nextLine().trim().toLowerCase();
 
         if (input.equals("compare")) {
             display.printComparisonTable(previousResults);
-        } else if (input.equals("all")) {
+            promptForComparisonChart(previousResults);
+            return;
+        }
+
+        if (input.equals("all")) {
             for (SimulationResult r : previousResults) {
                 display.printSimulationResult(r);
             }
-        } else {
-            try {
-                int idx = Integer.parseInt(input) - 1;
-                if (idx >= 0 && idx < previousResults.size()) {
-                    display.printSimulationResult(previousResults.get(idx));
-                } else {
-                    System.out.println("Invalid selection.");
+            return;
+        }
+
+        // Direct chart shortcuts: "chart 2", "chart all"
+        if (input.startsWith("chart")) {
+            String arg = input.substring(5).trim();
+            if (arg.equals("all")) {
+                chartViewer.showStrategyComparison(previousResults);
+            } else {
+                try {
+                    int idx = Integer.parseInt(arg) - 1;
+                    if (idx >= 0 && idx < previousResults.size()) {
+                        chartViewer.showSimulationDashboard(previousResults.get(idx));
+                    } else {
+                        System.out.println("Invalid selection.");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Usage: 'chart <n>' or 'chart all'");
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input.");
             }
+            return;
+        }
+
+        try {
+            int idx = Integer.parseInt(input) - 1;
+            if (idx >= 0 && idx < previousResults.size()) {
+                SimulationResult r = previousResults.get(idx);
+                display.printSimulationResult(r);
+                promptForChart(r);
+            } else {
+                System.out.println("Invalid selection.");
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input.");
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  Chart prompts
+    // ──────────────────────────────────────────────
+
+    private void promptForChart(SimulationResult result) {
+        if (result == null) return;
+        System.out.print("\nOpen interactive charts for this run? (y/n): ");
+        String answer = scanner.nextLine().trim().toLowerCase();
+        if (answer.equals("y") || answer.equals("yes")) {
+            chartViewer.showSimulationDashboard(result);
+        }
+    }
+
+    private void promptForComparisonChart(List<SimulationResult> results) {
+        if (results == null || results.isEmpty()) return;
+        if (results.size() < 2) {
+            promptForChart(results.get(0));
+            return;
+        }
+        System.out.print("\nOpen comparison charts? (y/n): ");
+        String answer = scanner.nextLine().trim().toLowerCase();
+        if (answer.equals("y") || answer.equals("yes")) {
+            chartViewer.showStrategyComparison(results);
         }
     }
 }

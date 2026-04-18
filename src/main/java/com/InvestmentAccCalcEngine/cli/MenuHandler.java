@@ -7,6 +7,7 @@ import com.InvestmentAccCalcEngine.domain.Property;
 import com.InvestmentAccCalcEngine.domain.RentalProperty;
 import com.InvestmentAccCalcEngine.service.*;
 import com.InvestmentAccCalcEngine.service.loan.LoanType;
+import com.InvestmentAccCalcEngine.viewer.ChartViewer;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ public class MenuHandler {
   private final RentalPropertyService rentalPropertyService;
   private final NetworthService networthService;
   private final DisplayFormatter display;
+  private final ChartViewer chartViewer;
 
   private final Scanner scanner;
 
@@ -40,7 +42,8 @@ public class MenuHandler {
                      PropertyService propertyService,
                      RentalPropertyService rentalPropertyService,
                      NetworthService networthService,
-                     DisplayFormatter display) {
+                     DisplayFormatter display,
+                     ChartViewer chartViewer) {
     this.bankAccountService = bankAccountService;
     this.salaryService = salaryService;
     this.projectionService = projectionService;
@@ -49,6 +52,7 @@ public class MenuHandler {
     this.rentalPropertyService = rentalPropertyService;
     this.networthService = networthService;
     this.display = display;
+    this.chartViewer = chartViewer;
     this.scanner = new Scanner(System.in);
   }
 
@@ -94,6 +98,13 @@ public class MenuHandler {
     List<MonthlyProjection> projections = projectionService.projectBalance(
         accountNumber, annualSalary, List.of(payments), months);
     display.printProjections(projections);
+
+    System.out.print("Open projection chart? (y/n): ");
+    String answer = scanner.nextLine().trim().toLowerCase();
+    if (answer.equals("y") || answer.equals("yes")) {
+      chartViewer.showBalanceProjection(
+          projections, bankAccountService.getBalance(accountNumber));
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -371,6 +382,14 @@ public class MenuHandler {
 
   public void handleViewNetworthHistory() {
     display.printNetworthHistory(networthService.getNetworthHistory());
+
+    if (networthService.getNetworthHistory().isEmpty()) return;
+
+    System.out.print("Open networth history chart? (y/n): ");
+    String answer = scanner.nextLine().trim().toLowerCase();
+    if (answer.equals("y") || answer.equals("yes")) {
+      chartViewer.showNetworthHistory(networthService.getNetworthHistory());
+    }
   }
 
   // ──────────────────────────────────────────────

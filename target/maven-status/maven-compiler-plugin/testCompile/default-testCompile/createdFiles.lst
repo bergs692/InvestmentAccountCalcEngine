@@ -1,6 +1,5 @@
 com\InvestmentAccCalcEngine\cli\MenuHandlerTest$HandleSellPropertyTests.class
 com\InvestmentAccCalcEngine\cli\MenuHandlerTest$HandleAddRentalPropertyTests.class
-com\InvestmentAccCalcEngine\cli\MenuHandlerTest$HandleProjectionsTests.class
 com\InvestmentAccCalcEngine\cli\MenuHandlerTest$HandleViewOwnedPropertiesTests.class
 com\InvestmentAccCalcEngine\cli\MenuHandlerTest.class
 com\InvestmentAccCalcEngine\cli\MenuHandlerTest$HandleViewRentalPropertiesTests.class
